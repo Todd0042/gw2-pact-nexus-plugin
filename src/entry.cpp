@@ -13,15 +13,17 @@
 
 #include <atomic>
 #include <chrono>
+#include <condition_variable>
 #include <cstring>
 #include <ctime>
 #include <direct.h>
 #include <fstream>
 #include <memory>
+#include <mutex>
 #include <string>
+#include <thread>
 #include <unordered_map>
 #include <vector>
-#include <thread>
 
 using json = nlohmann::json;
 
@@ -35,6 +37,7 @@ void RenderEventsWindow();
 void SaveSettings();
 void LoadSettings();
 void OnInputBind(const char* aIdentifier, bool aIsRelease);
+void RequestSyncNow();
 
 AddonDefinition AddonDef = {};
 HMODULE hSelf = nullptr;
@@ -56,9 +59,10 @@ std::atomic<bool> g_Running = false;
 std::atomic<bool> g_Fetching = false;
 std::atomic<bool> g_ShowWindow = true;
 std::atomic<bool> g_ManualSyncRequested = false;
-std::atomic<int> g_SecondsUntilNextSync = 0;
 
 std::thread g_Worker;
+std::mutex g_WorkerMutex;
+std::condition_variable g_WorkerWake;
 
 struct PluginConfig
 {
@@ -154,6 +158,13 @@ extern "C" __declspec(dllexport) AddonDefinition* GetAddonDef()
     AddonDef.Flags = EAddonFlags_None;
     return &AddonDef;
 }
+
+void RequestSyncNow()
+{
+    g_ManualSyncRequested = true;
+    g_WorkerWake.notify_one();
+}
+
 
 std::string JsonString(const json& item, const char* key, const std::string& fallback = "")
 {
@@ -972,25 +983,39 @@ void FetchEvents()
 
 void WorkerLoop()
 {
+    FetchEvents();
+
     while (g_Running)
     {
-        FetchEvents();
-
         auto config = std::atomic_load(&g_Config);
         int minutes = config ? config->refreshMinutes : 5;
-
         if (minutes < 5) minutes = 5;
 
-        int totalSeconds = minutes * 60;
+        auto nextWake =
+            std::chrono::steady_clock::now() +
+            std::chrono::minutes(minutes);
 
-        for (int i = totalSeconds; i > 0 && g_Running; --i)
+        std::unique_lock<std::mutex> lock(g_WorkerMutex);
+
+        g_WorkerWake.wait_until(
+            lock,
+            nextWake,
+            []()
+            {
+                return !g_Running.load() || g_ManualSyncRequested.load();
+            }
+        );
+
+        if (!g_Running)
         {
-            g_SecondsUntilNextSync = i;
-
-            if (g_ManualSyncRequested.exchange(false)) break;
-
-            std::this_thread::sleep_for(std::chrono::seconds(1));
+            break;
         }
+
+        g_ManualSyncRequested = false;
+
+        lock.unlock();
+
+        FetchEvents();
     }
 }
 
@@ -1087,8 +1112,6 @@ void RenderEventsWindow()
     auto state = std::atomic_load(&g_State);
     if (!state) return;
 
-    int nextSync = g_SecondsUntilNextSync.load();
-
     ImGui::TextUnformatted("Angemeldet als:");
     ImGui::SameLine();
     ImGui::TextColored(ImVec4(0.95f, 0.80f, 0.35f, 1.0f), "%s", ViewerLabel(*state).c_str());
@@ -1097,8 +1120,7 @@ void RenderEventsWindow()
 
     if (!g_Fetching && ImGui::Button("Jetzt synchronisieren"))
     {
-        g_ManualSyncRequested = true;
-        g_SecondsUntilNextSync = 0;
+        RequestSyncNow();
     }
 
     ImGui::SameLine();
@@ -1109,7 +1131,7 @@ void RenderEventsWindow()
     }
     else
     {
-        ImGui::TextDisabled("Naechster Sync in %ds", nextSync);
+        ImGui::TextDisabled("Auto Sync aktiv");
     }
 
     if (state->events.empty())
@@ -1279,8 +1301,7 @@ void ApplySettings()
     std::atomic_store(&g_Config, nextConfig);
     SaveSettings();
 
-    g_ManualSyncRequested = true;
-    g_SecondsUntilNextSync = 0;
+    RequestSyncNow();
 }
 
 void AddonOptions()
@@ -1392,8 +1413,12 @@ void AddonUnload()
 
     g_Running = false;
     g_ManualSyncRequested = true;
+    g_WorkerWake.notify_one();
 
-    if (g_Worker.joinable()) g_Worker.join();
+    if (g_Worker.joinable())
+    {
+        g_Worker.join();
+    }
 
     APIDefs->QuickAccess.Remove(QA_ID);
     APIDefs->InputBinds.Deregister(KB_ID);
