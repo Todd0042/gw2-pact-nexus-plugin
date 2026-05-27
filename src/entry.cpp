@@ -823,7 +823,7 @@ void RenderReminderMessage()
         ImGuiWindowFlags_NoCollapse
     ))
     {
-        ImGui::TextColored(ImVec4(1.0f, 0.82f, 0.35f, 1.0f), "Uffbasse: Ein Event startet bald!");
+        ImGui::TextColored(ImVec4(1.0f, 0.82f, 0.35f, 1.0f), "Reminder: Ein Event startet bald!");
         ImGui::Separator();
 
         ImGui::TextDisabled("Event:");
