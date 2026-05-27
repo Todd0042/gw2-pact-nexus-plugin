@@ -1208,10 +1208,10 @@ void RenderEventsWindow()
     ))
     {
         ImGui::TableSetupColumn("Event", ImGuiTableColumnFlags_WidthStretch, 2.6f);
-        ImGui::TableSetupColumn("Zeit", ImGuiTableColumnFlags_WidthStretch, 1.2f);
-        ImGui::TableSetupColumn("Leiter", ImGuiTableColumnFlags_WidthStretch, 1.3f);
+        ImGui::TableSetupColumn("Start", ImGuiTableColumnFlags_WidthStretch, 1.2f);
+        ImGui::TableSetupColumn("Eventleiter", ImGuiTableColumnFlags_WidthStretch, 1.3f);
         ImGui::TableSetupColumn("Tag", ImGuiTableColumnFlags_WidthFixed, 90.0f);
-        ImGui::TableSetupColumn("Teilnehmer", ImGuiTableColumnFlags_WidthStretch, 2.2f);
+        ImGui::TableSetupColumn("Teilnehmer / Rollen", ImGuiTableColumnFlags_WidthStretch, 2.2f);
         ImGui::TableSetupColumn("Angemeldet", ImGuiTableColumnFlags_WidthFixed, 95.0f);
         ImGui::TableSetupColumn("Aktionen", ImGuiTableColumnFlags_WidthFixed, 170.0f);
         ImGui::TableHeadersRow();
