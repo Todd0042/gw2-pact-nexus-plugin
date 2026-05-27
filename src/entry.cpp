@@ -2,11 +2,14 @@
 #include <winhttp.h>
 #include <shellapi.h>
 #pragma comment(lib, "winhttp.lib")
+#include <mmsystem.h>
+#pragma comment(lib, "winmm.lib")
 
 #include "nexus/Nexus.h"
 #include "mumble/Mumble.h"
 #include "imgui/imgui.h"
 #include "nlohmann/json.hpp"
+#include "resource.h"
 
 #include <atomic>
 #include <chrono>
@@ -16,9 +19,9 @@
 #include <fstream>
 #include <memory>
 #include <string>
-#include <thread>
 #include <unordered_map>
 #include <vector>
+#include <thread>
 
 using json = nlohmann::json;
 
@@ -27,11 +30,11 @@ void AddonUnload();
 void AddonRender();
 void AddonOptions();
 void WorkerLoop();
-void KeybindLoop();
 void FetchEvents();
 void RenderEventsWindow();
 void SaveSettings();
 void LoadSettings();
+void OnInputBind(const char* aIdentifier, bool aIsRelease);
 
 AddonDefinition AddonDef = {};
 HMODULE hSelf = nullptr;
@@ -44,21 +47,23 @@ const char* API_BASE_URL = "https://legendary-impact.de";
 const char* SETTINGS_DIR = "addons/LegendaryImpactEventmanager";
 const char* SETTINGS_FILE = "addons/LegendaryImpactEventmanager/settings.json";
 
+const char* QA_ID = "QA_LI_EVENTMANAGER";
+const char* KB_ID = "KB_LI_EVENTMANAGER";
+const char* ICON_ID = "ICON_LI_EVENTMANAGER";
+const char* ICON_HOVER_ID = "ICON_LI_EVENTMANAGER_HOVER";
+
 std::atomic<bool> g_Running = false;
 std::atomic<bool> g_Fetching = false;
 std::atomic<bool> g_ShowWindow = true;
 std::atomic<bool> g_ManualSyncRequested = false;
-std::atomic<bool> g_WaitingForKeybind = false;
 std::atomic<int> g_SecondsUntilNextSync = 0;
 
 std::thread g_Worker;
-std::thread g_KeybindWorker;
 
 struct PluginConfig
 {
     std::string token = "";
     int refreshMinutes = 5;
-    int toggleKey = VK_F8;
 
     bool reminderEnabled = true;
     int reminderMinutesBefore = 15;
@@ -116,14 +121,15 @@ std::shared_ptr<PluginState> g_State = std::make_shared<PluginState>();
 
 char g_EditToken[512] = "";
 int g_EditRefreshMinutes = 5;
-int g_EditToggleKey = VK_F8;
 
 bool g_EditReminderEnabled = true;
 int g_EditReminderMinutesBefore = 15;
 int g_EditReminderRepeatMinutes = 5;
 
 bool g_ShowReminderMessage = false;
-std::string g_ReminderMessage = "";
+std::string g_ReminderTitle = "";
+std::string g_ReminderDate = "";
+std::string g_ReminderTimeLeft = "";
 std::unordered_map<std::string, std::time_t> g_ReminderLastShown;
 
 BOOL APIENTRY DllMain(HMODULE hModule, DWORD reason, LPVOID)
@@ -227,10 +233,10 @@ std::string StripUnsupportedEmoji(const std::string& input)
         }
 
         bool remove =
-            (cp >= 0x1F000 && cp <= 0x1FAFF) || // fast alle modernen Emojis
-            (cp >= 0x2600 && cp <= 0x27BF) ||   // Symbole/Dingbats wie ⚠ ⚖
-            (cp >= 0xFE00 && cp <= 0xFE0F) ||   // Variation Selectors
-            (cp == 0x200D);                      // Zero Width Joiner
+            (cp >= 0x1F000 && cp <= 0x1FAFF) ||
+            (cp >= 0x2600 && cp <= 0x27BF) ||
+            (cp >= 0xFE00 && cp <= 0xFE0F) ||
+            (cp == 0x200D);
 
         if (!remove)
         {
@@ -617,58 +623,6 @@ void RenderMarkdownText(const std::string& text)
     if (!line.empty()) renderLine(line);
 }
 
-std::string GetKeyName(int vk)
-{
-    if (vk == VK_INSERT) return "Insert";
-    if (vk == VK_DELETE) return "Delete";
-    if (vk == VK_HOME) return "Home";
-    if (vk == VK_END) return "End";
-    if (vk == VK_PRIOR) return "Page Up";
-    if (vk == VK_NEXT) return "Page Down";
-    if (vk >= VK_F1 && vk <= VK_F24) return "F" + std::to_string(vk - VK_F1 + 1);
-
-    UINT scanCode = MapVirtualKeyA((UINT)vk, MAPVK_VK_TO_VSC);
-    LONG lParam = (scanCode << 16);
-
-    char nameBuffer[64] = {};
-    if (GetKeyNameTextA(lParam, nameBuffer, sizeof(nameBuffer)) > 0) return nameBuffer;
-
-    return "VK_" + std::to_string(vk);
-}
-
-void FlushKeyStates()
-{
-    for (int key = 1; key < 256; ++key)
-    {
-        GetAsyncKeyState(key);
-    }
-}
-
-int CapturePressedKey()
-{
-    for (int key = 1; key < 256; ++key)
-    {
-        SHORT state = GetAsyncKeyState(key);
-
-        if ((state & 0x0001) == 0) continue;
-
-        if (
-            key == VK_LBUTTON ||
-            key == VK_RBUTTON ||
-            key == VK_MBUTTON ||
-            key == VK_XBUTTON1 ||
-            key == VK_XBUTTON2
-            )
-        {
-            continue;
-        }
-
-        return key;
-    }
-
-    return 0;
-}
-
 void CopyToClipboard(const std::string& text)
 {
     if (!OpenClipboard(nullptr)) return;
@@ -702,7 +656,6 @@ void SaveSettings()
     json data;
     data["token"] = config->token;
     data["refreshMinutes"] = config->refreshMinutes;
-    data["toggleKey"] = config->toggleKey;
     data["showWindow"] = g_ShowWindow.load();
 
     data["reminderEnabled"] = config->reminderEnabled;
@@ -727,17 +680,20 @@ void LoadSettings()
 
         config->token = data.value("token", "");
         config->refreshMinutes = data.value("refreshMinutes", 5);
-        config->toggleKey = data.value("toggleKey", VK_F8);
+
+        if (config->refreshMinutes < 5) config->refreshMinutes = 5;
 
         config->reminderEnabled = data.value("reminderEnabled", true);
         config->reminderMinutesBefore = data.value("reminderMinutesBefore", 15);
         config->reminderRepeatMinutes = data.value("reminderRepeatMinutes", 5);
 
+        if (config->reminderMinutesBefore < 1) config->reminderMinutesBefore = 1;
+        if (config->reminderRepeatMinutes < 1) config->reminderRepeatMinutes = 1;
+
         std::atomic_store(&g_Config, config);
 
         strcpy_s(g_EditToken, config->token.c_str());
         g_EditRefreshMinutes = config->refreshMinutes;
-        g_EditToggleKey = config->toggleKey;
 
         g_EditReminderEnabled = config->reminderEnabled;
         g_EditReminderMinutesBefore = config->reminderMinutesBefore;
@@ -758,6 +714,7 @@ void StoreError(const std::string& error)
         nextState->events = oldState->events;
         nextState->viewerUsername = oldState->viewerUsername;
         nextState->viewerGw2Account = oldState->viewerGw2Account;
+        nextState->lastSync = oldState->lastSync;
     }
 
     nextState->lastSync = "Fehler: " + UiText(error);
@@ -774,10 +731,14 @@ std::string BuildEventsUrl(const PluginConfig& config)
     return std::string(API_BASE_URL) + "/api/nexus/events/public";
 }
 
-void ShowReminder(const std::string& message)
+void ShowReminder(const std::string& title, const std::string& date, int minutesUntilStart)
 {
-    g_ReminderMessage = message;
+    g_ReminderTitle = UiText(title);
+    g_ReminderDate = UiText(date);
+    g_ReminderTimeLeft = "ca. " + std::to_string(minutesUntilStart) + " Minuten";
     g_ShowReminderMessage = true;
+
+    PlaySoundA("SystemExclamation", nullptr, SND_ALIAS | SND_ASYNC);
 }
 
 void CheckEventReminders(const PluginState& state)
@@ -822,10 +783,9 @@ void CheckEventReminders(const PluginState& state)
         if (minutesUntilStart < 1) minutesUntilStart = 1;
 
         ShowReminder(
-            "Event startet in ca. " +
-            std::to_string(minutesUntilStart) +
-            " Minuten: " +
-            event.title
+            event.title,
+            FormatGermanDateTime(event.start),
+            minutesUntilStart
         );
 
         break;
@@ -839,24 +799,56 @@ void RenderReminderMessage()
         return;
     }
 
-    ImGui::SetNextWindowSize(ImVec2(420.0f, 0.0f), ImGuiCond_Appearing);
+    ImGui::SetNextWindowSize(ImVec2(460.0f, 0.0f), ImGuiCond_Appearing);
+    ImGui::SetNextWindowPos(ImVec2(40.0f, 120.0f), ImGuiCond_Appearing);
+
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(18.0f, 16.0f));
+    ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(10.0f, 10.0f));
 
     if (ImGui::Begin(
-        "Event Reminder###LegendaryImpactReminder",
+        "Legendary Impact - Eventmanager###LegendaryImpactReminder",
         &g_ShowReminderMessage,
-        ImGuiWindowFlags_AlwaysAutoResize
+        ImGuiWindowFlags_AlwaysAutoResize |
+        ImGuiWindowFlags_NoCollapse
     ))
     {
-        ImGui::TextWrapped("%s", g_ReminderMessage.c_str());
+        ImGui::TextColored(ImVec4(1.0f, 0.82f, 0.35f, 1.0f), "Uffbasse: Ein Event startet bald!");
+        ImGui::Separator();
+
+        ImGui::TextDisabled("Event:");
+        ImGui::SameLine();
+        ImGui::TextWrapped("%s", g_ReminderTitle.c_str());
+
+        ImGui::TextDisabled("Datum:");
+        ImGui::SameLine();
+        ImGui::TextWrapped("%s", g_ReminderDate.c_str());
+
+        ImGui::TextDisabled("Zeit bis Start:");
+        ImGui::SameLine();
+        ImGui::TextColored(ImVec4(0.95f, 0.80f, 0.35f, 1.0f), "%s", g_ReminderTimeLeft.c_str());
+
+        ImGui::Spacing();
+        ImGui::Separator();
         ImGui::Spacing();
 
-        if (ImGui::Button("OK"))
+        float buttonWidth = 120.0f;
+        float windowWidth = ImGui::GetWindowSize().x;
+        float cursorX = (windowWidth - buttonWidth) * 0.5f;
+
+        if (cursorX > 0.0f)
+        {
+            ImGui::SetCursorPosX(cursorX);
+        }
+
+        if (ImGui::Button("OK", ImVec2(buttonWidth, 0.0f)))
         {
             g_ShowReminderMessage = false;
         }
     }
 
     ImGui::End();
+
+    ImGui::PopStyleVar(2);
 }
 
 void FetchEvents()
@@ -1002,29 +994,6 @@ void WorkerLoop()
     }
 }
 
-void KeybindLoop()
-{
-    bool wasDown = false;
-
-    while (g_Running)
-    {
-        auto config = std::atomic_load(&g_Config);
-        int key = config ? config->toggleKey : VK_F8;
-
-        bool isDown = (GetAsyncKeyState(key) & 0x8000) != 0;
-
-        if (isDown && !wasDown && !g_WaitingForKeybind.load())
-        {
-            g_ShowWindow = !g_ShowWindow.load();
-            SaveSettings();
-        }
-
-        wasDown = isDown;
-
-        std::this_thread::sleep_for(std::chrono::milliseconds(25));
-    }
-}
-
 void RenderRoleWithBoon(const std::string& role, const std::string& boon)
 {
     ImGui::TextColored(RoleColor(role), "%s", RoleLabel(role).c_str());
@@ -1117,8 +1086,6 @@ void RenderEventsWindow()
 {
     auto state = std::atomic_load(&g_State);
     if (!state) return;
-
-    CheckEventReminders(*state);
 
     int nextSync = g_SecondsUntilNextSync.load();
 
@@ -1268,6 +1235,14 @@ void RenderEventsWindow()
 
 void AddonRender()
 {
+    auto state = std::atomic_load(&g_State);
+    if (state)
+    {
+        CheckEventReminders(*state);
+    }
+
+    RenderReminderMessage();
+
     bool show = g_ShowWindow.load();
     if (!show) return;
 
@@ -1285,7 +1260,6 @@ void AddonRender()
 
     g_ShowWindow = show;
     RenderEventsWindow();
-    RenderReminderMessage();
 
     ImGui::End();
     ImGui::PopStyleVar();
@@ -1297,7 +1271,6 @@ void ApplySettings()
 
     nextConfig->token = g_EditToken;
     nextConfig->refreshMinutes = g_EditRefreshMinutes < 5 ? 5 : g_EditRefreshMinutes;
-    nextConfig->toggleKey = g_EditToggleKey;
 
     nextConfig->reminderEnabled = g_EditReminderEnabled;
     nextConfig->reminderMinutesBefore = g_EditReminderMinutesBefore < 1 ? 1 : g_EditReminderMinutesBefore;
@@ -1337,36 +1310,7 @@ void AddonOptions()
     ImGui::SliderInt("Auto Sync Intervall Minuten", &g_EditRefreshMinutes, 5, 60);
     if (g_EditRefreshMinutes < 5) g_EditRefreshMinutes = 5;
 
-    ImGui::Spacing();
-    ImGui::Text("Toggle Key: %s", GetKeyName(g_EditToggleKey).c_str());
-
-    if (g_WaitingForKeybind.load())
-    {
-        ImGui::TextColored(ImVec4(1.0f, 0.75f, 0.2f, 1.0f), "Taste druecken... ESC zum Abbrechen");
-
-        int pressedKey = CapturePressedKey();
-
-        if (pressedKey == VK_ESCAPE)
-        {
-            g_WaitingForKeybind = false;
-            FlushKeyStates();
-        }
-        else if (pressedKey != 0)
-        {
-            g_EditToggleKey = pressedKey;
-            g_WaitingForKeybind = false;
-            FlushKeyStates();
-            ApplySettings();
-        }
-    }
-    else
-    {
-        if (ImGui::Button("Keybind wechseln"))
-        {
-            FlushKeyStates();
-            g_WaitingForKeybind = true;
-        }
-    }
+    ImGui::TextDisabled("Keybind: bitte in den Nexus Keybind-Einstellungen fuer Legendary Impact - Eventmanager setzen.");
 
     ImGui::Spacing();
     ImGui::Separator();
@@ -1382,7 +1326,7 @@ void AddonOptions()
 
     if (ImGui::Button("Test Reminder"))
     {
-        ShowReminder("Test Reminder: Dein Event startet bald.");
+        ShowReminder("Wing 4 Fullclear (Auch fuer Anfaenger)", FormatLocalNow(), 15);
     }
 
     ImGui::Spacing();
@@ -1391,6 +1335,17 @@ void AddonOptions()
     {
         ApplySettings();
     }
+}
+
+void OnInputBind(const char* aIdentifier, bool aIsRelease)
+{
+    if (aIsRelease) return;
+    if (!aIdentifier) return;
+
+    if (std::strcmp(aIdentifier, KB_ID) != 0) return;
+
+    g_ShowWindow = !g_ShowWindow.load();
+    SaveSettings();
 }
 
 void AddonLoad(AddonAPI* aApi)
@@ -1407,6 +1362,19 @@ void AddonLoad(AddonAPI* aApi)
     NexusLink = (NexusLinkData*)APIDefs->DataLink.Get("DL_NEXUS_LINK");
     MumbleLink = (Mumble::Data*)APIDefs->DataLink.Get("DL_MUMBLE_LINK");
 
+    APIDefs->Textures.LoadFromResource(ICON_ID, IDB_PNG1, hSelf, nullptr);
+    APIDefs->Textures.LoadFromResource(ICON_HOVER_ID, IDB_PNG2, hSelf, nullptr);
+
+    APIDefs->InputBinds.RegisterWithString(KB_ID, OnInputBind, "F8");
+
+    APIDefs->QuickAccess.Add(
+        QA_ID,
+        ICON_ID,
+        ICON_HOVER_ID,
+        KB_ID,
+        "Legendary Impact - Eventmanager"
+    );
+
     APIDefs->Renderer.Register(ERenderType_Render, AddonRender);
     APIDefs->Renderer.Register(ERenderType_OptionsRender, AddonOptions);
 
@@ -1414,7 +1382,6 @@ void AddonLoad(AddonAPI* aApi)
 
     g_Running = true;
     g_Worker = std::thread(WorkerLoop);
-    g_KeybindWorker = std::thread(KeybindLoop);
 
     APIDefs->Log(ELogLevel_DEBUG, name, "<c=#00ff00>Legendary Impact - Eventmanager</c> was loaded.");
 }
@@ -1427,7 +1394,9 @@ void AddonUnload()
     g_ManualSyncRequested = true;
 
     if (g_Worker.joinable()) g_Worker.join();
-    if (g_KeybindWorker.joinable()) g_KeybindWorker.join();
+
+    APIDefs->QuickAccess.Remove(QA_ID);
+    APIDefs->InputBinds.Deregister(KB_ID);
 
     APIDefs->Renderer.Deregister(AddonRender);
     APIDefs->Renderer.Deregister(AddonOptions);

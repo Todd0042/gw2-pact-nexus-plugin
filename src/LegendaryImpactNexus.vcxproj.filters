@@ -40,10 +40,18 @@
     <ClInclude Include="nexus\Nexus.h" />
     <ClInclude Include="mumble\Mumble.h" />
     <ClInclude Include="nlohmann\json.hpp" />
+    <ClInclude Include="resource.h" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="imgui">
       <UniqueIdentifier>{b8dcb93b-2947-498a-8c72-51bb322b9742}</UniqueIdentifier>
     </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="LegendaryImpactNexus.rc" />
+  </ItemGroup>
+  <ItemGroup>
+    <Image Include="resources\pact_logo.png" />
+    <Image Include="resources\pact_logo_hover.png" />
   </ItemGroup>
 </Project>
