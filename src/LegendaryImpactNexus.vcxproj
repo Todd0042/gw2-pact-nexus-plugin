@@ -192,11 +192,13 @@
     <ClCompile Include="imgui\imgui_widgets.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ResourceCompile Include="LegendaryImpactNexus.rc" />
+    <Image Include="resources\alacrity.png" />
+    <Image Include="resources\icon.png" />
+    <Image Include="resources\icon_hover.png" />
+    <Image Include="resources\quickness.png" />
   </ItemGroup>
   <ItemGroup>
-    <Image Include="resources\pact_logo.png" />
-    <Image Include="resources\pact_logo_hover.png" />
+    <ResourceCompile Include="LegendaryImpactNexus.rc" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

@@ -48,10 +48,12 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ResourceCompile Include="LegendaryImpactNexus.rc" />
+    <Image Include="resources\icon.png" />
+    <Image Include="resources\icon_hover.png" />
+    <Image Include="resources\quickness.png" />
+    <Image Include="resources\alacrity.png" />
   </ItemGroup>
   <ItemGroup>
-    <Image Include="resources\pact_logo.png" />
-    <Image Include="resources\pact_logo_hover.png" />
+    <ResourceCompile Include="LegendaryImpactNexus.rc" />
   </ItemGroup>
 </Project>

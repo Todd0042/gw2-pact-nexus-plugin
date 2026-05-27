@@ -54,6 +54,8 @@ const char* QA_ID = "QA_LI_EVENTMANAGER";
 const char* KB_ID = "KB_LI_EVENTMANAGER";
 const char* ICON_ID = "ICON_LI_EVENTMANAGER";
 const char* ICON_HOVER_ID = "ICON_LI_EVENTMANAGER_HOVER";
+const char* QUICKNESS_ICON_ID = "ICON_LI_QUICKNESS";
+const char* ALACRITY_ICON_ID = "ICON_LI_ALACRITY";
 
 std::atomic<bool> g_Running = false;
 std::atomic<bool> g_Fetching = false;
@@ -164,7 +166,6 @@ void RequestSyncNow()
     g_ManualSyncRequested = true;
     g_WorkerWake.notify_one();
 }
-
 
 std::string JsonString(const json& item, const char* key, const std::string& fallback = "")
 {
@@ -503,6 +504,19 @@ std::string FormatLocalNow()
     return buffer;
 }
 
+bool IsEventActive(const EventItem& event)
+{
+    std::time_t startTime = 0;
+    std::time_t endTime = 0;
+
+    if (!ParseIsoUtc(event.start, startTime)) return false;
+    if (!ParseIsoUtc(event.end, endTime)) return false;
+
+    std::time_t now = std::time(nullptr);
+
+    return now >= startTime && now <= endTime;
+}
+
 std::string RoleLabel(const std::string& role)
 {
     if (role == "BOONDPS") return "Support DPS";
@@ -521,15 +535,8 @@ std::string BoonLabel(const std::string& boon)
 ImVec4 RoleColor(const std::string& role)
 {
     if (role == "HEAL") return ImVec4(0.25f, 0.85f, 0.45f, 1.0f);
-    if (role == "BOONDPS") return ImVec4(0.95f, 0.55f, 0.20f, 1.0f);
+    if (role == "BOONDPS") return ImVec4(0.95f, 0.82f, 0.25f, 1.0f);
     if (role == "DPS") return ImVec4(1.0f, 0.35f, 0.35f, 1.0f);
-    return ImVec4(0.75f, 0.75f, 0.75f, 1.0f);
-}
-
-ImVec4 BoonColor(const std::string& boon)
-{
-    if (boon == "QUICKNESS") return ImVec4(0.95f, 0.75f, 0.25f, 1.0f);
-    if (boon == "ALACRITY") return ImVec4(0.45f, 0.75f, 1.0f, 1.0f);
     return ImVec4(0.75f, 0.75f, 0.75f, 1.0f);
 }
 
@@ -557,6 +564,36 @@ std::string TagLabel(const std::string& tag)
     if (tag == "MEETING") return "Besprechung";
     if (tag == "COMMUNITY") return "Community";
     return tag;
+}
+
+void RenderBoonIcon(const std::string& boon)
+{
+    const char* textureId = nullptr;
+
+    if (boon == "QUICKNESS")
+    {
+        textureId = QUICKNESS_ICON_ID;
+    }
+    else if (boon == "ALACRITY")
+    {
+        textureId = ALACRITY_ICON_ID;
+    }
+
+    if (!textureId)
+    {
+        ImGui::TextDisabled("-");
+        return;
+    }
+
+    Texture* texture = APIDefs->Textures.Get(textureId);
+
+    if (!texture || !texture->Resource)
+    {
+        ImGui::TextDisabled("%s", BoonLabel(boon).c_str());
+        return;
+    }
+
+    ImGui::Image((ImTextureID)texture->Resource, ImVec2(22.0f, 22.0f));
 }
 
 std::string StripSimpleMarkdown(std::string text)
@@ -1021,12 +1058,23 @@ void WorkerLoop()
 
 void RenderRoleWithBoon(const std::string& role, const std::string& boon)
 {
+    const float iconSize = 22.0f;
+    const float textHeight = ImGui::GetTextLineHeight();
+
+    float startY = ImGui::GetCursorPosY();
+
+    if (!boon.empty())
+    {
+        ImGui::SetCursorPosY(startY + (iconSize - textHeight) * 0.5f);
+    }
+
     ImGui::TextColored(RoleColor(role), "%s", RoleLabel(role).c_str());
 
     if (!boon.empty())
     {
         ImGui::SameLine();
-        ImGui::TextColored(BoonColor(boon), "[%s]", BoonLabel(boon).c_str());
+        ImGui::SetCursorPosY(startY);
+        RenderBoonIcon(boon);
     }
 }
 
@@ -1057,21 +1105,31 @@ void RenderEventAttendeesTable(const EventItem& event)
             ImGui::TableNextRow();
 
             ImGui::TableSetColumnIndex(0);
-            ImGui::TextUnformatted(DisplayUser(attendee.username, attendee.gw2Account).c_str());
+
+            auto state = std::atomic_load(&g_State);
+            bool isSelf =
+                state &&
+                !state->viewerGw2Account.empty() &&
+                attendee.gw2Account == state->viewerGw2Account;
+
+            if (isSelf)
+            {
+                ImGui::TextColored(
+                    ImVec4(1.0f, 0.15f, 0.15f, 1.0f),
+                    "%s",
+                    DisplayUser(attendee.username, attendee.gw2Account).c_str()
+                );
+            }
+            else
+            {
+                ImGui::TextUnformatted(DisplayUser(attendee.username, attendee.gw2Account).c_str());
+            }
 
             ImGui::TableSetColumnIndex(1);
             ImGui::TextColored(RoleColor(attendee.role), "%s", RoleLabel(attendee.role).c_str());
 
             ImGui::TableSetColumnIndex(2);
-
-            if (!attendee.boon.empty())
-            {
-                ImGui::TextColored(BoonColor(attendee.boon), "%s", BoonLabel(attendee.boon).c_str());
-            }
-            else
-            {
-                ImGui::TextDisabled("-");
-            }
+            RenderBoonIcon(attendee.boon);
 
             ImGui::TableSetColumnIndex(3);
 
@@ -1142,7 +1200,7 @@ void RenderEventsWindow()
 
     if (ImGui::BeginTable(
         "events",
-        8,
+        7,
         ImGuiTableFlags_Borders |
         ImGuiTableFlags_RowBg |
         ImGuiTableFlags_Resizable |
@@ -1151,7 +1209,6 @@ void RenderEventsWindow()
     {
         ImGui::TableSetupColumn("Event", ImGuiTableColumnFlags_WidthStretch, 2.6f);
         ImGui::TableSetupColumn("Zeit", ImGuiTableColumnFlags_WidthStretch, 1.2f);
-        ImGui::TableSetupColumn("Ort", ImGuiTableColumnFlags_WidthStretch, 1.2f);
         ImGui::TableSetupColumn("Leiter", ImGuiTableColumnFlags_WidthStretch, 1.3f);
         ImGui::TableSetupColumn("Tag", ImGuiTableColumnFlags_WidthFixed, 90.0f);
         ImGui::TableSetupColumn("Teilnehmer", ImGuiTableColumnFlags_WidthStretch, 2.2f);
@@ -1166,7 +1223,23 @@ void RenderEventsWindow()
 
             ImGui::TableSetColumnIndex(0);
 
-            if (ImGui::TreeNodeEx("event", ImGuiTreeNodeFlags_SpanFullWidth, "%s", event.title.c_str()))
+            bool eventOpen = ImGui::TreeNodeEx(
+                "event",
+                ImGuiTreeNodeFlags_SpanFullWidth,
+                "%s",
+                event.title.c_str()
+            );
+
+            if (IsEventActive(event))
+            {
+                ImGui::SameLine(0.0f, 4.0f);
+                ImGui::TextColored(
+                    ImVec4(0.20f, 0.90f, 0.30f, 1.0f),
+                    "[Aktiv]"
+                );
+            }
+
+            if (eventOpen)
             {
                 std::string cleanDescription = CleanEventDescription(event.description);
 
@@ -1187,9 +1260,24 @@ void RenderEventsWindow()
 
             ImGui::TableSetColumnIndex(2);
 
-            if (!event.location.empty())
+            if (!event.leaderName.empty() || !event.leaderAccount.empty())
             {
-                ImGui::TextWrapped("%s", event.location.c_str());
+                bool isSelfLeader =
+                    !state->viewerGw2Account.empty() &&
+                    event.leaderAccount == state->viewerGw2Account;
+
+                if (isSelfLeader)
+                {
+                    ImGui::TextColored(
+                        ImVec4(1.0f, 0.15f, 0.15f, 1.0f),
+                        "%s",
+                        DisplayUser(event.leaderName, event.leaderAccount).c_str()
+                    );
+                }
+                else
+                {
+                    ImGui::TextWrapped("%s", DisplayUser(event.leaderName, event.leaderAccount).c_str());
+                }
             }
             else
             {
@@ -1197,20 +1285,9 @@ void RenderEventsWindow()
             }
 
             ImGui::TableSetColumnIndex(3);
-
-            if (!event.leaderName.empty() || !event.leaderAccount.empty())
-            {
-                ImGui::TextWrapped("%s", DisplayUser(event.leaderName, event.leaderAccount).c_str());
-            }
-            else
-            {
-                ImGui::TextDisabled("-");
-            }
-
-            ImGui::TableSetColumnIndex(4);
             ImGui::TextColored(TagColor(event.tag), "%s", TagLabel(event.tag).c_str());
 
-            ImGui::TableSetColumnIndex(5);
+            ImGui::TableSetColumnIndex(4);
 
             std::string attendeeLabel = std::to_string(event.attendeeCount) + "/" + std::to_string(event.slotCount);
 
@@ -1220,7 +1297,7 @@ void RenderEventsWindow()
                 ImGui::TreePop();
             }
 
-            ImGui::TableSetColumnIndex(6);
+            ImGui::TableSetColumnIndex(5);
 
             if (event.isViewerAttending)
             {
@@ -1231,7 +1308,7 @@ void RenderEventsWindow()
                 ImGui::TextColored(ImVec4(1.0f, 0.25f, 0.25f, 1.0f), "Nein");
             }
 
-            ImGui::TableSetColumnIndex(7);
+            ImGui::TableSetColumnIndex(6);
 
             if (!event.url.empty() && ImGui::Button("Web"))
             {
@@ -1385,6 +1462,8 @@ void AddonLoad(AddonAPI* aApi)
 
     APIDefs->Textures.LoadFromResource(ICON_ID, IDB_PNG1, hSelf, nullptr);
     APIDefs->Textures.LoadFromResource(ICON_HOVER_ID, IDB_PNG2, hSelf, nullptr);
+    APIDefs->Textures.LoadFromResource(QUICKNESS_ICON_ID, IDB_PNG3, hSelf, nullptr);
+    APIDefs->Textures.LoadFromResource(ALACRITY_ICON_ID, IDB_PNG4, hSelf, nullptr);
 
     APIDefs->InputBinds.RegisterWithString(KB_ID, OnInputBind, "F8");
 
