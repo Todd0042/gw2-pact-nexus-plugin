@@ -16,7 +16,15 @@ namespace LegendaryImpactEventmanager
         m_ConfigStore(m_SharedState),
         m_EventService(m_SharedState, m_HttpClient),
         m_ReminderService(m_SharedState),
-        m_EventWindow(m_Api, m_SharedState, m_ConfigStore, m_ReminderService, [this]() { RequestSyncNow(); })
+        m_EventWindow(
+            m_Api,
+            m_SharedState,
+            m_ConfigStore,
+            m_ReminderService,
+            [this]()
+            {
+                RequestSyncNow();
+            })
     {
     }
 
@@ -32,35 +40,59 @@ namespace LegendaryImpactEventmanager
         ImGui::SetCurrentContext((ImGuiContext*)m_Api->ImguiContext);
         ImGui::SetAllocatorFunctions(
             (void* (*)(size_t, void*))m_Api->ImguiMalloc,
-            (void (*)(void*, void*))m_Api->ImguiFree
-        );
+            (void (*)(void*, void*))m_Api->ImguiFree);
 
         m_NexusLink = (NexusLinkData*)m_Api->DataLink.Get("DL_NEXUS_LINK");
         m_MumbleLink = (Mumble::Data*)m_Api->DataLink.Get("DL_MUMBLE_LINK");
 
         LoadResources();
         RegisterNexusHooks();
+
         m_ConfigStore.Load();
 
-        m_Running = true;
+        {
+            std::lock_guard<std::mutex> lock(m_WorkerMutex);
+            m_Running = true;
+            m_ManualSyncRequested = false;
+        }
+
         m_Worker = std::thread(&EventManagerApp::WorkerLoop, this);
 
-        m_Api->Log(ELogLevel_DEBUG, Constants::AddonName, "<c=#00ff00>Legendary Impact - Eventmanager</c> was loaded.");
+        m_Api->Log(
+            ELogLevel_DEBUG,
+            Constants::AddonName,
+            "Legendary Impact - Eventmanager was loaded.");
     }
 
     void EventManagerApp::Unload()
     {
-        if (!m_Api) return;
+        if (!m_Api)
+        {
+            return;
+        }
 
         m_ConfigStore.Save();
-        m_Running = false;
-        m_ManualSyncRequested = true;
+
+        {
+            std::lock_guard<std::mutex> lock(m_WorkerMutex);
+            m_Running = false;
+            m_ManualSyncRequested = true;
+        }
+
         m_WorkerWake.notify_one();
 
-        if (m_Worker.joinable()) m_Worker.join();
+        if (m_Worker.joinable())
+        {
+            m_Worker.join();
+        }
+
         DeregisterNexusHooks();
 
-        m_Api->Log(ELogLevel_DEBUG, Constants::AddonName, "Signing off <c=#ff0000>Legendary Impact - Eventmanager</c>, it was an honor commander.");
+        m_Api->Log(
+            ELogLevel_DEBUG,
+            Constants::AddonName,
+            "Signing off Legendary Impact - Eventmanager, it was an honor commander.");
+
         m_Api = nullptr;
     }
 
@@ -75,7 +107,14 @@ namespace LegendaryImpactEventmanager
     void EventManagerApp::RegisterNexusHooks()
     {
         m_Api->InputBinds.RegisterWithString(Constants::KeybindId, ::OnInputBind, "F8");
-        m_Api->QuickAccess.Add(Constants::QuickAccessId, Constants::IconId, Constants::IconHoverId, Constants::KeybindId, "Legendary Impact - Eventmanager");
+
+        m_Api->QuickAccess.Add(
+            Constants::QuickAccessId,
+            Constants::IconId,
+            Constants::IconHoverId,
+            Constants::KeybindId,
+            "Legendary Impact - Eventmanager");
+
         m_Api->Renderer.Register(ERenderType_Render, AddonRender);
         m_Api->Renderer.Register(ERenderType_OptionsRender, AddonOptions);
     }
@@ -84,6 +123,7 @@ namespace LegendaryImpactEventmanager
     {
         m_Api->QuickAccess.Remove(Constants::QuickAccessId);
         m_Api->InputBinds.Deregister(Constants::KeybindId);
+
         m_Api->Renderer.Deregister(AddonRender);
         m_Api->Renderer.Deregister(AddonOptions);
     }
@@ -100,34 +140,64 @@ namespace LegendaryImpactEventmanager
 
     void EventManagerApp::OnInputBind(const char* identifier, bool isRelease)
     {
-        if (isRelease || !identifier) return;
-        if (std::strcmp(identifier, Constants::KeybindId) != 0) return;
+        if (isRelease || !identifier)
+        {
+            return;
+        }
+
+        if (std::strcmp(identifier, Constants::KeybindId) != 0)
+        {
+            return;
+        }
+
         m_SharedState.ToggleWindowShown();
         m_ConfigStore.Save();
     }
 
     void EventManagerApp::RequestSyncNow()
     {
-        m_ManualSyncRequested = true;
+        {
+            std::lock_guard<std::mutex> lock(m_WorkerMutex);
+            m_ManualSyncRequested = true;
+        }
+
         m_WorkerWake.notify_one();
     }
 
     void EventManagerApp::WorkerLoop()
     {
         m_EventService.FetchEvents();
-        while (m_Running)
+
+        while (true)
         {
             auto config = m_SharedState.GetConfig();
+
             int minutes = config ? config->refreshMinutes : 5;
-            if (minutes < 5) minutes = 5;
 
-            auto nextWake = std::chrono::steady_clock::now() + std::chrono::minutes(minutes);
+            if (minutes < 5)
+            {
+                minutes = 5;
+            }
+
             std::unique_lock<std::mutex> lock(m_WorkerMutex);
-            m_WorkerWake.wait_until(lock, nextWake, [this]() { return !m_Running.load() || m_ManualSyncRequested.load(); });
 
-            if (!m_Running) break;
+            m_WorkerWake.wait_for(
+                lock,
+                std::chrono::minutes(minutes),
+                [this]()
+                {
+                    return !m_Running || m_ManualSyncRequested;
+                });
+
+            if (!m_Running)
+            {
+                break;
+            }
+
             m_ManualSyncRequested = false;
+
             lock.unlock();
+
             m_EventService.FetchEvents();
         }
     }

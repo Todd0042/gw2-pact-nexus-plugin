@@ -7,6 +7,7 @@
 #include "nexus/Nexus.h"
 #include <functional>
 #include <string>
+#include <chrono>
 
 namespace LegendaryImpactEventmanager
 {
@@ -23,6 +24,8 @@ namespace LegendaryImpactEventmanager
         void RenderRoleWithBoon(const std::string& role, const std::string& boon);
         void RenderBoonIcon(const std::string& boon);
         void RenderMarkdownText(const std::string& text);
+
+        std::chrono::steady_clock::time_point m_LastManualSync{};
         std::string ViewerLabel(const PluginState& state) const;
         ImVec4 RoleColor(const std::string& role) const;
         ImVec4 TagColor(const std::string& tag) const;

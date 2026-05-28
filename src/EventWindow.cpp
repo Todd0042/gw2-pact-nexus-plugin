@@ -2,6 +2,7 @@
 #include "Constants.h"
 #include "Utility.h"
 #include "imgui/imgui.h"
+#include "imgui/imgui_internal.h"
 #include <shellapi.h>
 
 namespace LegendaryImpactEventmanager
@@ -120,9 +121,51 @@ namespace LegendaryImpactEventmanager
         ImGui::Text("Letzter Sync: %s", state->lastSync.c_str());
         ImGui::Dummy(ImVec2(0.0f, 0.5f));
 
-        if (!m_SharedState.IsFetching() && ImGui::Button("Jetzt synchronisieren")) m_SyncNow();
+        const auto now = std::chrono::steady_clock::now();
+
+        const bool isFetching = m_SharedState.IsFetching();
+
+        const bool syncCooldownActive =
+            now - m_LastManualSync < std::chrono::seconds(10);
+
+        const bool canSync = !isFetching && !syncCooldownActive;
+
+        if (!canSync)
+        {
+            ImGui::PushItemFlag(ImGuiItemFlags_Disabled, true);
+            ImGui::PushStyleVar(ImGuiStyleVar_Alpha, ImGui::GetStyle().Alpha * 0.5f);
+        }
+
+        if (ImGui::Button("Jetzt synchronisieren") && canSync)
+        {
+            m_LastManualSync = now;
+            m_SyncNow();
+        }
+
+        if (!canSync)
+        {
+            ImGui::PopItemFlag();
+            ImGui::PopStyleVar();
+        }
+
         ImGui::SameLine();
-        ImGui::TextDisabled(m_SharedState.IsFetching() ? "Synchronisiere..." : "Auto Sync aktiv");
+
+        if (isFetching)
+        {
+            ImGui::TextDisabled("Synchronisiere...");
+        }
+        else if (syncCooldownActive)
+        {
+            const auto remaining =
+                10 - std::chrono::duration_cast<std::chrono::seconds>(
+                    now - m_LastManualSync).count();
+
+            ImGui::TextDisabled("Bitte warten... %llds", remaining);
+        }
+        else
+        {
+            ImGui::TextDisabled("Auto Sync aktiv");
+        }
         ImGui::Dummy(ImVec2(0.0f, 8.0f));
 
         if (state->events.empty()) { ImGui::TextDisabled("Keine Events vorhanden."); return; }

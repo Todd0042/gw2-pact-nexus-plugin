@@ -1,61 +1,75 @@
 #include "SharedState.h"
+#include <utility>
 
 namespace LegendaryImpactEventmanager
 {
     SharedState::SharedState()
     {
-        m_Config.store(std::make_shared<PluginConfig>());
-        m_State.store(std::make_shared<PluginState>());
+        m_Config.store(std::make_shared<PluginConfig>(), std::memory_order_release);
+        m_State.store(std::make_shared<PluginState>(), std::memory_order_release);
     }
 
-    std::shared_ptr<PluginConfig> SharedState::GetConfig() const
+    std::shared_ptr<const PluginConfig> SharedState::GetConfig() const
     {
-        return m_Config.load();
+        return m_Config.load(std::memory_order_acquire);
     }
 
-    void SharedState::SetConfig(std::shared_ptr<PluginConfig> config)
+    void SharedState::SetConfig(std::shared_ptr<const PluginConfig> config)
     {
-        m_Config.store(config);
+        m_Config.store(std::move(config), std::memory_order_release);
     }
 
-    std::shared_ptr<PluginState> SharedState::GetState() const
+    std::shared_ptr<const PluginState> SharedState::GetState() const
     {
-        return m_State.load();
+        return m_State.load(std::memory_order_acquire);
     }
 
-    void SharedState::SetState(std::shared_ptr<PluginState> state)
+    void SharedState::SetState(std::shared_ptr<const PluginState> state)
     {
-        m_State.store(state);
+        m_State.store(std::move(state), std::memory_order_release);
     }
 
     bool SharedState::IsWindowShown() const
     {
-        return m_ShowWindow.load();
+        return m_ShowWindow.load(std::memory_order_relaxed);
     }
 
     void SharedState::SetWindowShown(bool value)
     {
-        m_ShowWindow.store(value);
+        m_ShowWindow.store(value, std::memory_order_relaxed);
     }
 
     void SharedState::ToggleWindowShown()
     {
-        m_ShowWindow.store(!m_ShowWindow.load());
+        bool oldValue = m_ShowWindow.load(std::memory_order_relaxed);
+
+        while (!m_ShowWindow.compare_exchange_weak(
+            oldValue,
+            !oldValue,
+            std::memory_order_relaxed,
+            std::memory_order_relaxed))
+        {
+        }
     }
 
     bool SharedState::IsFetching() const
     {
-        return m_Fetching.load();
+        return m_Fetching.load(std::memory_order_acquire);
     }
 
     bool SharedState::TryBeginFetch()
     {
         bool expected = false;
-        return m_Fetching.compare_exchange_strong(expected, true);
+
+        return m_Fetching.compare_exchange_strong(
+            expected,
+            true,
+            std::memory_order_acq_rel,
+            std::memory_order_acquire);
     }
 
     void SharedState::EndFetch()
     {
-        m_Fetching.store(false);
+        m_Fetching.store(false, std::memory_order_release);
     }
 }

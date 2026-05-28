@@ -63,8 +63,8 @@ extern "C" __declspec(dllexport) AddonDefinition* GetAddonDef()
     g_AddonDef.Name = Constants::AddonName;
     g_AddonDef.Version.Major = 1;
     g_AddonDef.Version.Minor = 0;
-    g_AddonDef.Version.Build = 0;
-    g_AddonDef.Version.Revision = 2;
+    g_AddonDef.Version.Build = 1;
+    g_AddonDef.Version.Revision = 0;
     g_AddonDef.Author = "Backxtar";
     g_AddonDef.Description = "Guild Wars 2 Eventmanager for Legendary Impact.";
     g_AddonDef.Load = AddonLoad;
