@@ -1,34 +1,48 @@
 # Legendary Impact - Eventmanager
 
-Modern Guild Wars 2 event management directly inside Nexus.
+<p align="center">
+  <img src="docs/screen.png" width="900"/>
+</p>
 
+<p align="center">
+  Modern Guild Wars 2 event management directly inside Nexus.
+</p>
 
-# Features
+## Overview
 
-- Full Legendary Impact event integration
-- Automatic event synchronization
-- Event reminder notifications
-- Quick Access support
-- Markdown event descriptions
-- Attendee overview with roles and boons
-- Squad join shortcut support
-- Modern C++20 architecture
-- Optimized worker threads and mutex handling
+Legendary Impact - Eventmanager is a Nexus addon for Guild Wars 2 that integrates Legendary Impact event management directly into the game.
 
+The addon provides event synchronization, reminders, attendee overviews, role compositions, quick squad interaction features, and direct event browser access.
 
-# Screenshots
+## Features
 
-![Preview](docs/screen.png)
+| Feature | Description |
+|---|---|
+| Event Synchronization | Automatic synchronization with Legendary Impact |
+| Event Overview | View upcoming events directly ingame |
+| Reminder System | Notifications before event start |
+| Attendee Overview | Display attendees, roles, and boon compositions |
+| Squad Join Support | Quickly copy `/sqjoin` commands |
+| Browser Integration | Open events directly in the browser to sign up |
+| Markdown Rendering | Render formatted event descriptions |
+| Quick Access | Integrated Nexus Quick Access support |
+| Modern Architecture | Built with modern C++20 |
 
+## Screenshot
 
-# Requirements
+<p align="center">
+  <img src="docs/screen.png" width="850"/>
+</p>
 
-- Guild Wars 2
-- Nexus Addon Loader
-- Windows x64
+## Requirements
 
+| Requirement | Version |
+|---|---|
+| Guild Wars 2 | Latest |
+| Nexus Addon Loader | Required |
+| Operating System | Windows x64 |
 
-# Installation
+## Installation
 
 1. Download the latest release
 2. Extract the addon into:
@@ -37,69 +51,61 @@ Modern Guild Wars 2 event management directly inside Nexus.
 Guild Wars 2/addons/
 ```
 
-3. Start Guild Wars 2
+3. Launch Guild Wars 2
 4. Open Nexus
 5. Enable `Legendary Impact - Eventmanager`
 
-
-# Configuration
+## Configuration
 
 The addon can be configured directly inside the Nexus options menu.
 
-Available settings:
+### Available Settings
 
-- Legendary Impact token
-- Auto sync interval
-- Reminder settings
-- Window visibility
-- Keybind configuration
+| Setting | Description |
+|---|---|
+| Legendary Impact Token | API authentication token |
+| Auto Sync Interval | Automatic synchronization interval |
+| Reminder Settings | Configure event notifications |
+| Window Visibility | Toggle addon window |
+| Keybind | Configure window toggle key |
 
----
-
-# Default Keybind
+## Default Keybind
 
 ```text
 F8
 ```
 
-Can be changed inside the Nexus keybind settings.
+The keybind can be changed inside the Nexus keybind settings.
 
+## Technologies
 
-# Technologies
+| Technology | Purpose |
+|---|---|
+| C++20 | Core implementation |
+| Nexus API | Addon integration |
+| ImGui | User interface |
+| WinHTTP | HTTP communication |
+| nlohmann/json | JSON parsing |
 
-- C++20
-- Nexus API
-- ImGui
-- WinHTTP
-- nlohmann/json
+## Building
 
+### Recommended Environment
 
-# Building
+| Tool | Version |
+|---|---|
+| Visual Studio | 2022 |
+| C++ Standard | C++20 |
 
-Recommended setup:
-
-- Visual Studio 2022
-- C++20 enabled
-
-Compiler settings:
+### Compiler Settings
 
 ```text
 /std:c++20
 /permissive-
 ```
 
+## Credits
 
-# Credits
-
-Created by Backxtar
-
-Special thanks to:
-
-- Raidcore
-- Nexus
-
----
-
-# License
-
-This project is provided as-is for the Guild Wars 2 community.
+| Name | Contribution |
+|---|---|
+| Backxtar | Development |
+| Raidcore | Nexus Framework |
