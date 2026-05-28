@@ -16,6 +16,7 @@ namespace LegendaryImpactEventmanager
         char* TokenBuffer();
         int& RefreshMinutes();
         bool& ReminderEnabled();
+        bool& AnnounceNewEventsEnabled();
         int& ReminderMinutesBefore();
         int& ReminderRepeatMinutes();
 
@@ -24,6 +25,7 @@ namespace LegendaryImpactEventmanager
         std::array<char, 512> m_EditToken{};
         int m_EditRefreshMinutes = 5;
         bool m_EditReminderEnabled = true;
+        bool m_EditAnnounceNewEventsEnabled = true;
         int m_EditReminderMinutesBefore = 15;
         int m_EditReminderRepeatMinutes = 5;
     };

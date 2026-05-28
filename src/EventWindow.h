@@ -14,7 +14,13 @@ namespace LegendaryImpactEventmanager
     class EventWindow
     {
     public:
-        EventWindow(AddonAPI*& api, SharedState& sharedState, ConfigStore& configStore, ReminderService& reminderService, std::function<void()> syncNow);
+        EventWindow(
+            AddonAPI*& api, 
+            SharedState& sharedState,
+            ConfigStore& configStore, 
+            ReminderService& reminderService, 
+            std::function<void()> syncNow
+        );
         void RenderAddonWindow();
         void RenderOptions();
 
@@ -28,7 +34,6 @@ namespace LegendaryImpactEventmanager
         std::chrono::steady_clock::time_point m_LastManualSync{};
         std::string ViewerLabel(const PluginState& state) const;
         ImVec4 RoleColor(const std::string& role) const;
-        ImVec4 TagColor(const std::string& tag) const;
 
         AddonAPI*& m_Api;
         SharedState& m_SharedState;

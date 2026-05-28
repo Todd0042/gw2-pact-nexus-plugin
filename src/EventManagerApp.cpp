@@ -21,12 +21,7 @@ namespace LegendaryImpactEventmanager
             m_SharedState,
             m_ConfigStore,
             m_ReminderService,
-            [this]()
-            {
-                RequestSyncNow();
-            })
-    {
-    }
+            [this]() { RequestSyncNow(); }) {}
 
     EventManagerApp::~EventManagerApp()
     {
@@ -49,6 +44,7 @@ namespace LegendaryImpactEventmanager
         RegisterNexusHooks();
 
         m_ConfigStore.Load();
+        m_EventService.LoadCachedEvents();
 
         {
             std::lock_guard<std::mutex> lock(m_WorkerMutex);

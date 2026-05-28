@@ -2,6 +2,9 @@
 #include "Constants.h"
 #include "Utility.h"
 #include "nlohmann/json.hpp"
+#include <fstream>
+#include <unordered_set>
+#include <direct.h>
 
 using json = nlohmann::json;
 
@@ -11,6 +14,85 @@ namespace
     {
         if (!item.contains(key) || !item[key].is_string()) return fallback;
         return item[key].get<std::string>();
+    }
+
+    void EventToJson(nlohmann::json& target, const LegendaryImpactEventmanager::EventItem& event)
+    {
+        target["id"] = event.id;
+        target["title"] = event.title;
+        target["description"] = event.description;
+        target["start"] = event.start;
+        target["end"] = event.end;
+        target["tag"] = event.tag;
+        target["location"] = event.location;
+        target["url"] = event.url;
+        target["leaderName"] = event.leaderName;
+        target["leaderAccount"] = event.leaderAccount;
+        target["isViewerAttending"] = event.isViewerAttending;
+        target["attendeeCount"] = event.attendeeCount;
+        target["slotCount"] = event.slotCount;
+        target["attendees"] = nlohmann::json::array();
+
+        for (const auto& attendee : event.attendees)
+        {
+            nlohmann::json attendeeJson;
+            attendeeJson["username"] = attendee.username;
+            attendeeJson["gw2Account"] = attendee.gw2Account;
+            attendeeJson["role"] = attendee.role;
+            attendeeJson["boon"] = attendee.boon;
+            attendeeJson["flexRoles"] = nlohmann::json::array();
+
+            for (const auto& flex : attendee.flexRoles)
+            {
+                attendeeJson["flexRoles"].push_back({
+                    { "role", flex.role },
+                    { "boon", flex.boon }
+                    });
+            }
+            target["attendees"].push_back(attendeeJson);
+        }
+    }
+
+    LegendaryImpactEventmanager::EventItem EventFromJson(const nlohmann::json& item)
+    {
+        LegendaryImpactEventmanager::EventItem event;
+        event.id = item.value("id", "");
+        event.title = item.value("title", "Unbenannt");
+        event.description = item.value("description", "");
+        event.start = item.value("start", "");
+        event.end = item.value("end", "");
+        event.tag = item.value("tag", "");
+        event.location = item.value("location", "");
+        event.url = item.value("url", "");
+        event.leaderName = item.value("leaderName", "");
+        event.leaderAccount = item.value("leaderAccount", "");
+        event.isViewerAttending = item.value("isViewerAttending", false);
+        event.attendeeCount = item.value("attendeeCount", 0);
+        event.slotCount = item.value("slotCount", 0);
+        if (item.contains("attendees") && item["attendees"].is_array())
+        {
+            for (const auto& attendeeJson : item["attendees"])
+            {
+                LegendaryImpactEventmanager::EventAttendee attendee;
+                attendee.username = attendeeJson.value("username", "");
+                attendee.gw2Account = attendeeJson.value("gw2Account", "");
+                attendee.role = attendeeJson.value("role", "");
+                attendee.boon = attendeeJson.value("boon", "");
+
+                if (attendeeJson.contains("flexRoles") && attendeeJson["flexRoles"].is_array())
+                {
+                    for (const auto& flexJson : attendeeJson["flexRoles"])
+                    {
+                        LegendaryImpactEventmanager::EventFlexRole flex;
+                        flex.role = flexJson.value("role", "");
+                        flex.boon = flexJson.value("boon", "");
+                        attendee.flexRoles.push_back(flex);
+                    }
+                }
+                event.attendees.push_back(attendee);
+            }
+        }
+        return event;
     }
 }
 
@@ -68,6 +150,20 @@ namespace LegendaryImpactEventmanager
 
         try
         {
+            auto oldState = m_SharedState.GetState();
+            std::unordered_set<std::string> oldEventIds;
+
+            if (oldState)
+            {
+                for (const auto& event : oldState->events)
+                {
+                    if (!event.id.empty())
+                    {
+                        oldEventIds.insert(event.id);
+                    }
+                }
+            }
+
             json data = json::parse(body);
             auto nextState = std::make_shared<PluginState>();
             nextState->lastSync = Utility::FormatLocalNow();
@@ -141,10 +237,16 @@ namespace LegendaryImpactEventmanager
                             event.attendees.push_back(attendee);
                         }
                     }
+                    if (!event.id.empty() && !oldEventIds.empty() && !oldEventIds.contains(event.id))
+                    {
+                        nextState->newEvents.push_back(event);
+                    }
+
                     nextState->events.push_back(event);
                 }
             }
             m_SharedState.SetState(nextState);
+            SaveCachedEvents(*nextState);
         }
         catch (const std::exception& ex)
         {
@@ -152,5 +254,67 @@ namespace LegendaryImpactEventmanager
         }
 
         onExit();
+    }
+
+    void EventService::LoadCachedEvents()
+    {
+        std::ifstream file(Constants::EventsCacheFile);
+
+        if (!file.is_open())
+        {
+            return;
+        }
+
+        try
+        {
+            json data;
+            file >> data;
+
+            auto state = std::make_shared<PluginState>();
+
+            state->lastSync = data.value("lastSync", "-");
+            state->viewerUsername = data.value("viewerUsername", "");
+            state->viewerGw2Account = data.value("viewerGw2Account", "");
+
+            if (data.contains("events") && data["events"].is_array())
+            {
+                for (const auto& item : data["events"])
+                {
+                    state->events.push_back(EventFromJson(item));
+                }
+            }
+
+            m_SharedState.SetState(state);
+        }
+        catch (...)
+        {
+        }
+    }
+
+    void EventService::SaveCachedEvents(const PluginState& state) const
+    {
+        _mkdir("addons");
+        _mkdir(Constants::SettingsDir);
+
+        json data;
+
+        data["lastSync"] = state.lastSync;
+        data["viewerUsername"] = state.viewerUsername;
+        data["viewerGw2Account"] = state.viewerGw2Account;
+        data["events"] = json::array();
+
+        for (const auto& event : state.events)
+        {
+            json eventJson;
+            EventToJson(eventJson, event);
+            data["events"].push_back(eventJson);
+        }
+
+        std::ofstream file(Constants::EventsCacheFile);
+
+        if (file.is_open())
+        {
+            file << data.dump(4);
+        }
     }
 }

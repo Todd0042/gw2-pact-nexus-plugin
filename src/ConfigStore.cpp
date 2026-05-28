@@ -31,6 +31,9 @@ namespace LegendaryImpactEventmanager
             if (config->reminderMinutesBefore < 1) config->reminderMinutesBefore = 1;
             if (config->reminderRepeatMinutes < 1) config->reminderRepeatMinutes = 1;
 
+            config->announceNewEventsEnabled = data.value("announceNewEventsEnabled", true);
+            m_EditAnnounceNewEventsEnabled = config->announceNewEventsEnabled;
+
             m_SharedState.SetConfig(config);
             strcpy_s(m_EditToken.data(), m_EditToken.size(), config->token.c_str());
             m_EditRefreshMinutes = config->refreshMinutes;
@@ -53,6 +56,7 @@ namespace LegendaryImpactEventmanager
         data["refreshMinutes"] = config ? config->refreshMinutes : 5;
         data["showWindow"] = m_SharedState.IsWindowShown();
         data["reminderEnabled"] = config ? config->reminderEnabled : true;
+        data["announceNewEventsEnabled"] = config ? config->announceNewEventsEnabled : true;
         data["reminderMinutesBefore"] = config ? config->reminderMinutesBefore : 15;
         data["reminderRepeatMinutes"] = config ? config->reminderRepeatMinutes : 5;
 
@@ -66,6 +70,7 @@ namespace LegendaryImpactEventmanager
         nextConfig->token = m_EditToken.data();
         nextConfig->refreshMinutes = m_EditRefreshMinutes < 5 ? 5 : m_EditRefreshMinutes;
         nextConfig->reminderEnabled = m_EditReminderEnabled;
+        nextConfig->announceNewEventsEnabled = m_EditAnnounceNewEventsEnabled;
         nextConfig->reminderMinutesBefore = m_EditReminderMinutesBefore < 1 ? 1 : m_EditReminderMinutesBefore;
         nextConfig->reminderRepeatMinutes = m_EditReminderRepeatMinutes < 1 ? 1 : m_EditReminderRepeatMinutes;
         m_SharedState.SetConfig(nextConfig);
@@ -75,6 +80,7 @@ namespace LegendaryImpactEventmanager
     char* ConfigStore::TokenBuffer() { return m_EditToken.data(); }
     int& ConfigStore::RefreshMinutes() { return m_EditRefreshMinutes; }
     bool& ConfigStore::ReminderEnabled() { return m_EditReminderEnabled; }
+    bool& ConfigStore::AnnounceNewEventsEnabled() { return m_EditAnnounceNewEventsEnabled; }
     int& ConfigStore::ReminderMinutesBefore() { return m_EditReminderMinutesBefore; }
     int& ConfigStore::ReminderRepeatMinutes() { return m_EditReminderRepeatMinutes; }
 }

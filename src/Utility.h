@@ -3,6 +3,7 @@
 #include <ctime>
 #include <string>
 #include <Windows.h>
+#include "imgui/imgui.h"
 
 namespace LegendaryImpactEventmanager::Utility
 {
@@ -20,6 +21,7 @@ namespace LegendaryImpactEventmanager::Utility
     std::string RoleLabel(const std::string& role);
     std::string BoonLabel(const std::string& boon);
     std::string TagLabel(const std::string& tag);
+    ImVec4 TagColor(const std::string& tag);
     std::string StripSimpleMarkdown(std::string text);
     void CopyToClipboard(const std::string& text);
 }

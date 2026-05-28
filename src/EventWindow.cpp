@@ -19,19 +19,6 @@ namespace LegendaryImpactEventmanager
         return ImVec4(0.75f, 0.75f, 0.75f, 1.0f);
     }
 
-    ImVec4 EventWindow::TagColor(const std::string& tag) const
-    {
-        if (tag == "RAID") return ImVec4(0.90f, 0.25f, 0.20f, 1.0f);
-        if (tag == "FRACTAL") return ImVec4(0.35f, 0.55f, 1.0f, 1.0f);
-        if (tag == "STRIKE") return ImVec4(0.80f, 0.35f, 1.0f, 1.0f);
-        if (tag == "OPEN_WORLD") return ImVec4(0.25f, 0.85f, 0.40f, 1.0f);
-        if (tag == "WVW") return ImVec4(1.0f, 0.55f, 0.20f, 1.0f);
-        if (tag == "PVP") return ImVec4(1.0f, 0.25f, 0.35f, 1.0f);
-        if (tag == "MEETING") return ImVec4(0.95f, 0.80f, 0.35f, 1.0f);
-        if (tag == "COMMUNITY") return ImVec4(0.30f, 0.90f, 0.80f, 1.0f);
-        return ImVec4(0.75f, 0.75f, 0.75f, 1.0f);
-    }
-
     std::string EventWindow::ViewerLabel(const PluginState& state) const
     {
         if (!state.viewerGw2Account.empty())
@@ -182,7 +169,10 @@ namespace LegendaryImpactEventmanager
                 ImGui::TableNextRow();
                 ImGui::TableSetColumnIndex(0);
                 bool eventOpen = ImGui::TreeNodeEx("event", ImGuiTreeNodeFlags_SpanFullWidth, "%s", event.title.c_str());
-                if (Utility::IsEventActive(event)) { ImGui::SameLine(0.0f, 4.0f); ImGui::TextColored(ImVec4(0.20f, 0.90f, 0.30f, 1.0f), "[Aktiv]"); }
+                if (Utility::IsEventActive(event)) { 
+                    ImGui::SameLine(0.0f, 4.0f);
+                    ImGui::TextColored(ImVec4(0.20f, 0.90f, 0.30f, 1.0f), "[Aktiv]"); 
+                }
                 if (eventOpen)
                 {
                     std::string cleanDescription = Utility::CleanEventDescription(event.description);
@@ -191,8 +181,10 @@ namespace LegendaryImpactEventmanager
                     ImGui::TreePop();
                 }
 
-                ImGui::TableSetColumnIndex(1); ImGui::TextWrapped("%s", Utility::FormatGermanDateTime(event.start).c_str());
+                ImGui::TableSetColumnIndex(1); 
+                ImGui::TextWrapped("%s", Utility::FormatGermanDateTime(event.start).c_str());
                 ImGui::TableSetColumnIndex(2);
+
                 if (!event.leaderName.empty() || !event.leaderAccount.empty())
                 {
                     bool isSelfLeader = !state->viewerGw2Account.empty() && event.leaderAccount == state->viewerGw2Account;
@@ -201,16 +193,26 @@ namespace LegendaryImpactEventmanager
                 }
                 else ImGui::TextDisabled("-");
 
-                ImGui::TableSetColumnIndex(3); ImGui::TextColored(TagColor(event.tag), "%s", Utility::TagLabel(event.tag).c_str());
+                ImGui::TableSetColumnIndex(3); 
+                ImGui::TextColored(Utility::TagColor(event.tag), "%s", Utility::TagLabel(event.tag).c_str());
                 ImGui::TableSetColumnIndex(4);
+
                 std::string attendeeLabel = std::to_string(event.attendeeCount) + "/" + std::to_string(event.slotCount);
-                if (ImGui::TreeNodeEx(attendeeLabel.c_str(), ImGuiTreeNodeFlags_SpanFullWidth)) { RenderEventAttendeesTable(event); ImGui::TreePop(); }
+                if (ImGui::TreeNodeEx(attendeeLabel.c_str(), ImGuiTreeNodeFlags_SpanFullWidth)) { 
+                    RenderEventAttendeesTable(event); 
+                    ImGui::TreePop(); 
+                }
+
                 ImGui::TableSetColumnIndex(5);
                 if (event.isViewerAttending) ImGui::TextColored(ImVec4(0.20f, 0.90f, 0.30f, 1.0f), "Ja");
                 else ImGui::TextColored(ImVec4(1.0f, 0.25f, 0.25f, 1.0f), "Nein");
+
                 ImGui::TableSetColumnIndex(6);
                 if (!event.url.empty() && ImGui::Button("Web")) ShellExecuteA(nullptr, "open", event.url.c_str(), nullptr, nullptr, SW_SHOWNORMAL);
-                if (!event.leaderAccount.empty()) { ImGui::SameLine(); if (ImGui::Button("SqJoin")) Utility::CopyToClipboard("/sqjoin " + event.leaderAccount); }
+                if (!event.leaderAccount.empty()) { 
+                    ImGui::SameLine(); 
+                    if (ImGui::Button("SqJoin")) Utility::CopyToClipboard("/sqjoin " + event.leaderAccount); 
+                }
                 ImGui::PopID();
             }
             ImGui::EndTable();
@@ -220,7 +222,12 @@ namespace LegendaryImpactEventmanager
     void EventWindow::RenderAddonWindow()
     {
         auto state = m_SharedState.GetState();
-        if (state) m_ReminderService.CheckEventReminders(*state);
+        if (state)
+        {
+            m_ReminderService.CheckEventReminders(*state);
+            m_ReminderService.CheckNewEventAnnouncements(*state);
+        }
+
         m_ReminderService.Render();
 
         bool show = m_SharedState.IsWindowShown();
@@ -263,8 +270,36 @@ namespace LegendaryImpactEventmanager
         if (m_ConfigStore.ReminderMinutesBefore() < 1) m_ConfigStore.ReminderMinutesBefore() = 1;
         ImGui::SliderInt("Reminder wiederholen alle Minuten", &m_ConfigStore.ReminderRepeatMinutes(), 1, 60);
         if (m_ConfigStore.ReminderRepeatMinutes() < 1) m_ConfigStore.ReminderRepeatMinutes() = 1;
+        ImGui::Checkbox("Neue Events ankuendigen", &m_ConfigStore.AnnounceNewEventsEnabled());
 
-        if (ImGui::Button("Test Reminder")) m_ReminderService.ShowReminder("Wing 4 Fullclear (Auch fuer Anfaenger)", Utility::FormatLocalNow(), 15);
+
+        if (ImGui::Button("Test Reminder")) m_ReminderService.ShowReminder("Wing 4 Fullclear (Auch fuer Anfaenger)", Utility::FormatLocalNow(), "RAID", 15);
+        ImGui::SameLine();
+        if (ImGui::Button("Test Neue Events"))
+        {
+            std::vector<EventItem> testEvents;
+
+            EventItem raid;
+            raid.title = "Wing 4 Fullclear";
+            raid.start = "2025-01-15T19:00:00";
+            raid.tag = "RAID";
+
+            EventItem strike;
+            strike.title = "Strike Training";
+            strike.start = "2025-01-16T20:00:00";
+            strike.tag = "STRIKE";
+
+            EventItem fractal;
+            fractal.title = "CM Fraktale";
+            fractal.start = "2025-01-17T18:30:00";
+            fractal.tag = "FRACTAL";
+
+            testEvents.push_back(raid);
+            testEvents.push_back(strike);
+            testEvents.push_back(fractal);
+
+            m_ReminderService.ShowNewEventsAnnouncement(testEvents);
+        }
         ImGui::Spacing();
         if (ImGui::Button("Einstellungen speichern")) { m_ConfigStore.ApplyFromEditBuffer(); m_SyncNow(); }
     }

@@ -9,6 +9,7 @@ namespace LegendaryImpactEventmanager
         std::string token = "";
         int refreshMinutes = 5;
         bool reminderEnabled = true;
+        bool announceNewEventsEnabled = true;
         int reminderMinutesBefore = 15;
         int reminderRepeatMinutes = 5;
     };
@@ -52,5 +53,6 @@ namespace LegendaryImpactEventmanager
         std::string viewerUsername = "";
         std::string viewerGw2Account = "";
         std::vector<EventItem> events;
+        std::vector<EventItem> newEvents;
     };
 }

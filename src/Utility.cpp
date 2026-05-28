@@ -150,6 +150,20 @@ namespace LegendaryImpactEventmanager::Utility
         return tag;
     }
 
+    ImVec4 TagColor(const std::string& tag)
+    {
+        if (tag == "RAID") return ImVec4(0.90f, 0.25f, 0.20f, 1.0f);
+        if (tag == "FRACTAL") return ImVec4(0.35f, 0.55f, 1.0f, 1.0f);
+        if (tag == "STRIKE") return ImVec4(0.80f, 0.35f, 1.0f, 1.0f);
+        if (tag == "OPEN_WORLD") return ImVec4(0.25f, 0.85f, 0.40f, 1.0f);
+        if (tag == "WVW") return ImVec4(1.0f, 0.55f, 0.20f, 1.0f);
+        if (tag == "PVP") return ImVec4(1.0f, 0.25f, 0.35f, 1.0f);
+        if (tag == "MEETING") return ImVec4(0.95f, 0.80f, 0.35f, 1.0f);
+        if (tag == "COMMUNITY") return ImVec4(0.30f, 0.90f, 0.80f, 1.0f);
+
+        return ImVec4(0.75f, 0.75f, 0.75f, 1.0f);
+    }
+
     std::string StripSimpleMarkdown(std::string text)
     {
         const char* tokens[] = { "**", "__", "`" };

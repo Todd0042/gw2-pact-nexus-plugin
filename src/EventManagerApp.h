@@ -27,6 +27,7 @@ namespace LegendaryImpactEventmanager
         void RenderOptions();
 
         void OnInputBind(const char* identifier, bool isRelease);
+
         void RequestSyncNow();
 
     private:
