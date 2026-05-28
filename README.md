@@ -8,6 +8,14 @@
   Modern Guild Wars 2 event management directly inside Nexus.
 </p>
 
+<p align="center">
+  <img src="https://img.shields.io/badge/C%2B%2B-20-blue.svg"/>
+  <img src="https://img.shields.io/badge/platform-Windows-x64"/>
+  <img src="https://img.shields.io/badge/Guild%20Wars%202-Nexus-orange"/>
+  <img src="https://img.shields.io/badge/status-active-success"/>
+  <img src="https://img.shields.io/badge/build-release-brightgreen"/>
+</p>
+
 ## Overview
 
 Legendary Impact - Eventmanager is a Nexus addon for Guild Wars 2 that integrates Legendary Impact event management directly into the game.
@@ -27,12 +35,6 @@ The addon provides event synchronization, reminders, attendee overviews, role co
 | Markdown Rendering | Render formatted event descriptions |
 | Quick Access | Integrated Nexus Quick Access support |
 | Modern Architecture | Built with modern C++20 |
-
-## Screenshot
-
-<p align="center">
-  <img src="docs/screen.png" width="850"/>
-</p>
 
 ## Requirements
 
@@ -81,11 +83,11 @@ The keybind can be changed inside the Nexus keybind settings.
 
 | Technology | Purpose |
 |---|---|
-| C++20 | Core implementation |
-| Nexus API | Addon integration |
-| ImGui | User interface |
-| WinHTTP | HTTP communication |
-| nlohmann/json | JSON parsing |
+| [C++20](https://en.cppreference.com/w/cpp/20) | Core implementation |
+| [Nexus API](https://github.com/RaidcoreGG/Nexus) | Addon integration |
+| [ImGui](https://github.com/ocornut/imgui) | User interface |
+| [WinHTTP](https://learn.microsoft.com/en-us/windows/win32/winhttp/about-winhttp) | HTTP communication |
+| [nlohmann/json](https://github.com/nlohmann/json) | JSON parsing |
 
 ## Building
 
@@ -107,5 +109,5 @@ The keybind can be changed inside the Nexus keybind settings.
 
 | Name | Contribution |
 |---|---|
-| Backxtar | Development |
-| Raidcore | Nexus Framework |
+| [Backxtar](https://gitlab.com/) | Development |
+| [Raidcore](https://github.com/RaidcoreGG) | Nexus Framework |
