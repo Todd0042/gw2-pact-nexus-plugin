@@ -70,5 +70,9 @@ extern "C" __declspec(dllexport) AddonDefinition* GetAddonDef()
     g_AddonDef.Load = AddonLoad;
     g_AddonDef.Unload = AddonUnload;
     g_AddonDef.Flags = EAddonFlags_None;
+
+    g_AddonDef.Provider = EUpdateProvider_GitHub;
+    g_AddonDef.UpdateLink = "https://github.com/Backxtar/gw2-pact-nexus-plugin";
+
     return &g_AddonDef;
 }
