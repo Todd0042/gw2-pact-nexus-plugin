@@ -467,7 +467,7 @@ std::string FormatGermanDateTime(const std::string& value)
     char buffer[128] = {};
     sprintf_s(
         buffer,
-        "%02d. %s %04d %02d:%02d Uhr",
+        "%02d. %s %04d - %02d:%02d Uhr",
         local.tm_mday,
         months[local.tm_mon],
         local.tm_year + 1900,
@@ -482,26 +482,23 @@ std::string FormatLocalNow()
 {
     std::time_t now = std::time(nullptr);
 
-    std::tm local = {};
-    localtime_s(&local, &now);
+    std::tm utc = {};
+    gmtime_s(&utc, &now);
 
-    static const char* months[] = {
-        "Jan.", "Feb.", "Maerz", "Apr.", "Mai", "Juni",
-        "Juli", "Aug.", "Sept.", "Okt.", "Nov.", "Dez."
-    };
+    char iso[64] = {};
 
-    char buffer[128] = {};
     sprintf_s(
-        buffer,
-        "%02d. %s %04d %02d:%02d Uhr",
-        local.tm_mday,
-        months[local.tm_mon],
-        local.tm_year + 1900,
-        local.tm_hour,
-        local.tm_min
+        iso,
+        "%04d-%02d-%02dT%02d:%02d:%02d",
+        utc.tm_year + 1900,
+        utc.tm_mon + 1,
+        utc.tm_mday,
+        utc.tm_hour,
+        utc.tm_min,
+        utc.tm_sec
     );
 
-    return buffer;
+    return FormatGermanDateTime(iso);
 }
 
 bool IsEventActive(const EventItem& event)
@@ -1175,6 +1172,7 @@ void RenderEventsWindow()
     ImGui::TextColored(ImVec4(0.95f, 0.80f, 0.35f, 1.0f), "%s", ViewerLabel(*state).c_str());
 
     ImGui::Text("Letzter Sync: %s", state->lastSync.c_str());
+    ImGui::Dummy(ImVec2(0.0f, 1.5f));
 
     if (!g_Fetching && ImGui::Button("Jetzt synchronisieren"))
     {
@@ -1191,6 +1189,8 @@ void RenderEventsWindow()
     {
         ImGui::TextDisabled("Auto Sync aktiv");
     }
+
+    ImGui::Dummy(ImVec2(0.0f, 8.0f));
 
     if (state->events.empty())
     {
@@ -1347,7 +1347,7 @@ void AddonRender()
 
     std::string title = "Legendary Impact - Eventmanager###LegendaryImpactEventmanagerWindow";
 
-    ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(14.0f, 14.0f));
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(14.0f, 8.0f));
 
     if (!ImGui::Begin(title.c_str(), &show))
     {
