@@ -2,7 +2,6 @@
 
 Modern Guild Wars 2 event management directly inside Nexus.
 
----
 
 # Features
 
@@ -16,13 +15,11 @@ Modern Guild Wars 2 event management directly inside Nexus.
 - Modern C++20 architecture
 - Optimized worker threads and mutex handling
 
----
 
 # Screenshots
 
 ![Preview](docs/screen.png)
 
----
 
 # Requirements
 
@@ -30,7 +27,6 @@ Modern Guild Wars 2 event management directly inside Nexus.
 - Nexus Addon Loader
 - Windows x64
 
----
 
 # Installation
 
@@ -45,7 +41,6 @@ Guild Wars 2/addons/
 4. Open Nexus
 5. Enable `Legendary Impact - Eventmanager`
 
----
 
 # Configuration
 
@@ -69,7 +64,6 @@ F8
 
 Can be changed inside the Nexus keybind settings.
 
----
 
 # Technologies
 
@@ -79,7 +73,6 @@ Can be changed inside the Nexus keybind settings.
 - WinHTTP
 - nlohmann/json
 
----
 
 # Building
 
@@ -95,28 +88,6 @@ Compiler settings:
 /permissive-
 ```
 
----
-
-# Release Notes
-
-## v1.0.0
-
-### Added
-
-- Initial release
-- Event synchronization
-- Reminder system
-- Event attendee overview
-- Quick Access integration
-
-### Improvements
-
-- Increased performance
-- Optimized mutex loops
-- Modernized architecture
-- Upgraded to C++20
-
----
 
 # Credits
 
