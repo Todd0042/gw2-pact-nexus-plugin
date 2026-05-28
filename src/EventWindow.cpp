@@ -122,11 +122,8 @@ namespace LegendaryImpactEventmanager
         ImGui::Dummy(ImVec2(0.0f, 0.5f));
 
         const auto now = std::chrono::steady_clock::now();
-
         const bool isFetching = m_SharedState.IsFetching();
-
-        const bool syncCooldownActive =
-            now - m_LastManualSync < std::chrono::seconds(10);
+        const bool syncCooldownActive = now - m_LastManualSync < std::chrono::seconds(10);
 
         const bool canSync = !isFetching && !syncCooldownActive;
 
@@ -162,10 +159,8 @@ namespace LegendaryImpactEventmanager
 
             ImGui::TextDisabled("Bitte warten... %llds", remaining);
         }
-        else
-        {
-            ImGui::TextDisabled("Auto Sync aktiv");
-        }
+        else ImGui::TextDisabled("Auto Sync aktiv");
+
         ImGui::Dummy(ImVec2(0.0f, 8.0f));
 
         if (state->events.empty()) { ImGui::TextDisabled("Keine Events vorhanden."); return; }

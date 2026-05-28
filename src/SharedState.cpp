@@ -47,9 +47,7 @@ namespace LegendaryImpactEventmanager
             oldValue,
             !oldValue,
             std::memory_order_relaxed,
-            std::memory_order_relaxed))
-        {
-        }
+            std::memory_order_relaxed)) {}
     }
 
     bool SharedState::IsFetching() const

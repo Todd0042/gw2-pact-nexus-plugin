@@ -23,26 +23,33 @@ namespace LegendaryImpactEventmanager
         if (!config || !config->reminderEnabled) return;
 
         std::time_t now = std::time(nullptr);
-        int beforeSeconds = config->reminderMinutesBefore * 60;
-        int repeatSeconds = config->reminderRepeatMinutes * 60;
+
+        const int beforeSeconds = config->reminderMinutesBefore * 60;
+        const int repeatSeconds = config->reminderRepeatMinutes * 60;
 
         for (const auto& event : state.events)
         {
+            if (!event.isViewerAttending) continue;
+
             std::time_t startTime = 0;
+
             if (!Utility::ParseIsoUtc(event.start, startTime)) continue;
 
-            int secondsUntilStart = static_cast<int>(std::difftime(startTime, now));
+            const int secondsUntilStart =
+                static_cast<int>(std::difftime(startTime, now));
+
             if (secondsUntilStart < 0 || secondsUntilStart > beforeSeconds) continue;
+            const std::time_t lastShown = m_ReminderLastShown[event.id];
 
-            std::time_t lastShown = m_ReminderLastShown[event.id];
             if (lastShown > 0 && std::difftime(now, lastShown) < repeatSeconds) continue;
-
             m_ReminderLastShown[event.id] = now;
+
             int minutesUntilStart = secondsUntilStart / 60;
             if (minutesUntilStart < 1) minutesUntilStart = 1;
 
             ShowReminder(event.title, Utility::FormatGermanDateTime(event.start), minutesUntilStart);
-            break;
+
+            break; // if not u get multiple messages
         }
     }
 
