@@ -59,6 +59,8 @@
     <ClInclude Include="HttpClient.h" />
     <ClInclude Include="Models.h" />
     <ClInclude Include="ReminderService.h" />
+    <ClInclude Include="RTAPI\RTAPI.h" />
+    <ClInclude Include="RTAPI\RTAPI.hpp" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="imgui">

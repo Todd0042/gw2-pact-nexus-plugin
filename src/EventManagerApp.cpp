@@ -11,6 +11,12 @@ void OnInputBind(const char* identifier, bool isRelease);
 
 namespace LegendaryImpactEventmanager
 {
+    EventManagerApp* EventManagerApp::s_Instance = nullptr;
+    EventManagerApp* EventManagerApp::GetInstance()
+    {
+        return s_Instance;
+    }
+
     EventManagerApp::EventManagerApp(HMODULE self)
         : m_Self(self),
         m_ConfigStore(m_SharedState),
@@ -21,11 +27,16 @@ namespace LegendaryImpactEventmanager
             m_SharedState,
             m_ConfigStore,
             m_ReminderService,
-            [this]() { RequestSyncNow(); }) {}
+            m_RtApi,
+            [this]() { RequestSyncNow(); }) 
+    {
+        s_Instance = this;
+    }
 
     EventManagerApp::~EventManagerApp()
     {
         Unload();
+        s_Instance = nullptr;
     }
 
     void EventManagerApp::Load(AddonAPI* api)
@@ -39,6 +50,12 @@ namespace LegendaryImpactEventmanager
 
         m_NexusLink = (NexusLinkData*)m_Api->DataLink.Get("DL_NEXUS_LINK");
         m_MumbleLink = (Mumble::Data*)m_Api->DataLink.Get("DL_MUMBLE_LINK");
+        m_RtApi = (RTAPI::RealTimeData*)m_Api->DataLink.Get(DL_RTAPI);
+
+        if (!m_RtApi || (m_RtApi && m_RtApi->GameBuild == 0))
+        {
+            m_RtApi = nullptr;
+        }
 
         LoadResources();
         RegisterNexusHooks();
@@ -89,7 +106,25 @@ namespace LegendaryImpactEventmanager
             Constants::AddonName,
             "Signing off Legendary Impact - Eventmanager, it was an honor commander.");
 
+        m_NexusLink = nullptr;
+        m_MumbleLink = nullptr;
+        m_RtApi = nullptr;
+
         m_Api = nullptr;
+    }
+
+    void EventManagerApp::OnExtAddonLoaded(int* signature)
+    {
+        auto* instance = GetInstance();
+        if (!instance) return;
+        instance->HandleExtAddonLoaded(signature);
+    }
+
+    void EventManagerApp::OnExtAddonUnloaded(int* signature)
+    {
+        auto* instance = GetInstance();
+        if (!instance) return;
+        instance->HandleExtAddonUnloaded(signature);
     }
 
     void EventManagerApp::LoadResources()
@@ -98,6 +133,33 @@ namespace LegendaryImpactEventmanager
         m_Api->Textures.LoadFromResource(Constants::IconHoverId, IDB_PNG2, m_Self, nullptr);
         m_Api->Textures.LoadFromResource(Constants::QuicknessIconId, IDB_PNG3, m_Self, nullptr);
         m_Api->Textures.LoadFromResource(Constants::AlacrityIconId, IDB_PNG4, m_Self, nullptr);
+    }
+
+    void EventManagerApp::HandleExtAddonLoaded(int* signature)
+    {
+        if (!signature) return;
+
+        // RTAPI
+        if (*signature == RTAPI_SIG)
+        {
+            m_RtApi = (RTAPI::RealTimeData*)m_Api->DataLink.Get(DL_RTAPI);
+
+            if (m_RtApi && m_RtApi->GameBuild == 0)
+            {
+                m_RtApi = nullptr;
+            }
+        }
+    }
+
+    void EventManagerApp::HandleExtAddonUnloaded(int* signature)
+    {
+        if (!signature) return;
+
+        // RTAPI
+        if (*signature == RTAPI_SIG)
+        {
+            m_RtApi = nullptr;
+        }
     }
 
     void EventManagerApp::RegisterNexusHooks()
@@ -113,6 +175,9 @@ namespace LegendaryImpactEventmanager
 
         m_Api->Renderer.Register(ERenderType_Render, AddonRender);
         m_Api->Renderer.Register(ERenderType_OptionsRender, AddonOptions);
+
+        m_Api->Events.Subscribe("EV_ADDON_LOADED", (EVENT_CONSUME) EventManagerApp::OnExtAddonLoaded);
+        m_Api->Events.Subscribe("EV_ADDON_UNLOADED", (EVENT_CONSUME) EventManagerApp::OnExtAddonUnloaded);
     }
 
     void EventManagerApp::DeregisterNexusHooks()
@@ -122,6 +187,9 @@ namespace LegendaryImpactEventmanager
 
         m_Api->Renderer.Deregister(AddonRender);
         m_Api->Renderer.Deregister(AddonOptions);
+
+        m_Api->Events.Unsubscribe("EV_ADDON_LOADED", (EVENT_CONSUME) EventManagerApp::OnExtAddonLoaded);
+        m_Api->Events.Unsubscribe("EV_ADDON_UNLOADED", (EVENT_CONSUME) EventManagerApp::OnExtAddonUnloaded);
     }
 
     void EventManagerApp::Render()
@@ -177,10 +245,7 @@ namespace LegendaryImpactEventmanager
 
             std::unique_lock<std::mutex> lock(m_WorkerMutex);
 
-            m_WorkerWake.wait_for(
-                lock,
-                std::chrono::minutes(minutes),
-                [this]()
+            m_WorkerWake.wait_for(lock, std::chrono::minutes(minutes), [this]()
                 {
                     return !m_Running || m_ManualSyncRequested;
                 });

@@ -7,3 +7,6 @@
 [submodule "src/mumble"]
 	path = src/mumble
 	url = https://github.com/RaidcoreGG/RCGG-lib-mumble-api
+[submodule "src/RTAPI"]
+	path = src/RTAPI
+	url = https://github.com/TyrianDeveloperCollective/GW2-RealTime-API-Releases.git

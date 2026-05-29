@@ -7,8 +7,8 @@
 
 namespace LegendaryImpactEventmanager
 {
-    EventWindow::EventWindow(AddonAPI*& api, SharedState& sharedState, ConfigStore& configStore, ReminderService& reminderService, std::function<void()> syncNow)
-        : m_Api(api), m_SharedState(sharedState), m_ConfigStore(configStore), m_ReminderService(reminderService), m_SyncNow(std::move(syncNow)) {
+    EventWindow::EventWindow(AddonAPI*& api, SharedState& sharedState, ConfigStore& configStore, ReminderService& reminderService, RTAPI::RealTimeData*& rtApi, std::function<void()> syncNow)
+        : m_Api(api), m_SharedState(sharedState), m_ConfigStore(configStore), m_ReminderService(reminderService), m_RtApi(rtApi), m_SyncNow(std::move(syncNow)) {
     }
 
     ImVec4 EventWindow::RoleColor(const std::string& role) const
@@ -27,6 +27,27 @@ namespace LegendaryImpactEventmanager
             return state.viewerGw2Account;
         }
         return "Public";
+    }
+
+    void EventWindow::RenderRtApiStatus()
+    {
+        ImGui::TextUnformatted("RealTime API:");
+        ImGui::SameLine();
+
+        if (m_RtApi && m_RtApi->GameBuild != 0)
+        {
+            ImGui::TextColored(
+                ImVec4(0.20f, 0.90f, 0.30f, 1.0f),
+                "Installiert");
+        }
+        else
+        {
+            ImGui::TextColored(
+                ImVec4(1.0f, 0.25f, 0.25f, 1.0f),
+                "Nicht installiert");
+            ImGui::SameLine();
+            ImGui::TextDisabled("(eingeschraenkte Funktionalitaet)");
+        }
     }
 
     void EventWindow::RenderBoonIcon(const std::string& boon)
@@ -106,6 +127,7 @@ namespace LegendaryImpactEventmanager
         ImGui::TextUnformatted("Angemeldet als:"); ImGui::SameLine();
         ImGui::TextColored(ImVec4(0.95f, 0.80f, 0.35f, 1.0f), "%s", ViewerLabel(*state).c_str());
         ImGui::Text("Letzter Sync: %s", state->lastSync.c_str());
+        RenderRtApiStatus();
         ImGui::Dummy(ImVec2(0.0f, 0.5f));
 
         const auto now = std::chrono::steady_clock::now();
@@ -147,7 +169,6 @@ namespace LegendaryImpactEventmanager
             ImGui::TextDisabled("Bitte warten... %llds", remaining);
         }
         else ImGui::TextDisabled("Auto Sync aktiv");
-
         ImGui::Dummy(ImVec2(0.0f, 8.0f));
 
         if (state->events.empty()) { ImGui::TextDisabled("Keine Events vorhanden."); return; }
@@ -249,6 +270,7 @@ namespace LegendaryImpactEventmanager
     {
         ImGui::Separator();
         ImGui::Text("Legendary Impact - Eventmanager");
+        RenderRtApiStatus();
         auto state = m_SharedState.GetState();
         if (state)
         {
@@ -264,14 +286,15 @@ namespace LegendaryImpactEventmanager
         if (m_ConfigStore.RefreshMinutes() < 5) m_ConfigStore.RefreshMinutes() = 5;
         ImGui::TextDisabled("Keybind: bitte in den Nexus Keybind-Einstellungen fuer Legendary Impact - Eventmanager setzen.");
 
-        ImGui::Spacing(); ImGui::Separator(); ImGui::Text("Reminder");
+        ImGui::Spacing(); 
+        ImGui::Separator(); 
+        ImGui::Text("Reminder");
         ImGui::Checkbox("Reminder aktivieren", &m_ConfigStore.ReminderEnabled());
         ImGui::SliderInt("Reminder Minuten vor Event", &m_ConfigStore.ReminderMinutesBefore(), 1, 120);
         if (m_ConfigStore.ReminderMinutesBefore() < 1) m_ConfigStore.ReminderMinutesBefore() = 1;
         ImGui::SliderInt("Reminder wiederholen alle Minuten", &m_ConfigStore.ReminderRepeatMinutes(), 1, 60);
         if (m_ConfigStore.ReminderRepeatMinutes() < 1) m_ConfigStore.ReminderRepeatMinutes() = 1;
         ImGui::Checkbox("Neue Events ankuendigen", &m_ConfigStore.AnnounceNewEventsEnabled());
-
 
         if (ImGui::Button("Test Reminder")) m_ReminderService.ShowReminder("Wing 4 Fullclear (Auch fuer Anfaenger)", Utility::FormatLocalNow(), "RAID", 15);
         ImGui::SameLine();

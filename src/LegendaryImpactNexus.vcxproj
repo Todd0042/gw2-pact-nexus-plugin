@@ -191,6 +191,8 @@
     <ClInclude Include="nlohmann\json.hpp" />
     <ClInclude Include="ReminderService.h" />
     <ClInclude Include="resource.h" />
+    <ClInclude Include="RTAPI\RTAPI.h" />
+    <ClInclude Include="RTAPI\RTAPI.hpp" />
     <ClInclude Include="SharedState.h" />
     <ClInclude Include="Utility.h" />
   </ItemGroup>

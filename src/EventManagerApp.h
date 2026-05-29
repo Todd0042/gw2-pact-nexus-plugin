@@ -8,6 +8,7 @@
 #include "SharedState.h"
 #include "nexus/Nexus.h"
 #include "mumble/Mumble.h"
+#include "RTAPI/RTAPI.hpp"
 #include <condition_variable>
 #include <mutex>
 #include <thread>
@@ -23,6 +24,9 @@ namespace LegendaryImpactEventmanager
         void Load(AddonAPI* api);
         void Unload();
 
+        static void OnExtAddonLoaded(int* signature);
+        static void OnExtAddonUnloaded(int* signature);
+
         void Render();
         void RenderOptions();
 
@@ -31,17 +35,24 @@ namespace LegendaryImpactEventmanager
         void RequestSyncNow();
 
     private:
+        static EventManagerApp* GetInstance();
+        static EventManagerApp* s_Instance;
+
         void WorkerLoop();
 
         void RegisterNexusHooks();
         void DeregisterNexusHooks();
         void LoadResources();
 
+        void HandleExtAddonLoaded(int* signature);
+        void HandleExtAddonUnloaded(int* signature);
+
         HMODULE m_Self = nullptr;
         AddonAPI* m_Api = nullptr;
 
         NexusLinkData* m_NexusLink = nullptr;
         Mumble::Data* m_MumbleLink = nullptr;
+        RTAPI::RealTimeData* m_RtApi = nullptr;
 
         SharedState m_SharedState;
         HttpClient m_HttpClient;
