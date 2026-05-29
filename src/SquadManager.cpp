@@ -1,5 +1,4 @@
 #include "SquadManager.h"
-
 #include <algorithm>
 #include <cctype>
 
@@ -16,9 +15,12 @@ namespace LegendaryImpactEventmanager
         member.accountName = groupMember->AccountName;
         member.characterName = groupMember->CharacterName;
         member.subgroup = groupMember->Subgroup;
+        member.profession = groupMember->Profession;
+        member.eliteSpecialization = groupMember->EliteSpecialization;
         member.isCommander = groupMember->IsCommander;
         member.isLieutenant = groupMember->IsLieutenant;
         member.isSelf = groupMember->IsSelf;
+        member.isInInstance = groupMember->IsInInstance;
 
         m_SharedState.UpdateState([&](PluginState& state) {
             const std::string accountName = NormalizeAccountName(member.accountName);

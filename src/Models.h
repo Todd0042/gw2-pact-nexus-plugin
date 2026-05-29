@@ -50,10 +50,13 @@ namespace LegendaryImpactEventmanager
     struct SquadMember {
         std::string accountName;
         std::string characterName;
-        int subgroup = 0;
+        uint32_t subgroup = 0;            // 0 for parties, 1-15 according to the squad's subgroup
+        uint32_t profession = 0;          // 1-9 = Profession; 0 Unknown -> e.g. on loading screen or logged out
+        uint32_t eliteSpecialization = 0; // Third Spec ID, not nec
         bool isCommander = false;
         bool isLieutenant = false;
         bool isSelf = false;
+        bool isInInstance = false;
     };
 
     struct PluginState
