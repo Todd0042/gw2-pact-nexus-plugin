@@ -9,11 +9,9 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/C%2B%2B-20-blue.svg"/>
-  <img src="https://img.shields.io/badge/platform-Windows-x64"/>
-  <img src="https://img.shields.io/badge/Guild%20Wars%202-Nexus-orange"/>
-  <img src="https://img.shields.io/badge/status-active-success"/>
-  <img src="https://img.shields.io/badge/build-release-brightgreen"/>
+  <img src="https://img.shields.io/github/v/release/Backxtar/gw2-pact-nexus-plugin?style=for-the-badge&label=Latest%20Version" />
+  <img src="https://img.shields.io/github/release-date/Backxtar/gw2-pact-nexus-plugin?style=for-the-badge&label=Released" />
+  <img src="https://img.shields.io/github/downloads/Backxtar/gw2-pact-nexus-plugin/total?style=for-the-badge&label=Downloads" />
 </p>
 
 ## Overview
