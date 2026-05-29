@@ -177,6 +177,7 @@ namespace LegendaryImpactEventmanager
 
                     bool inSquad = false;
                     std::string characterName;
+                    uint32_t subGroup = 0;
 
                     if (state && !attendee.gw2Account.empty())
                     {
@@ -188,7 +189,8 @@ namespace LegendaryImpactEventmanager
                             {
                                 inSquad = true;
                                 characterName = member.characterName;
-                                isSelf = member.isSelf || isSelf;
+                                isSelf = isSelf || member.isSelf;
+                                subGroup = member.subgroup;
                                 break;
                             }
                         }
@@ -212,6 +214,12 @@ namespace LegendaryImpactEventmanager
                         else
                         {
                             ImGui::TextUnformatted(characterName.c_str());
+                        }
+
+                        if (subGroup != 0)
+                        {
+                            ImGui::SameLine();
+                            ImGui::TextUnformatted(("[" + std::to_string(subGroup) + "]").c_str());
                         }
 
                         ImGui::SetCursorPosY(startY);
