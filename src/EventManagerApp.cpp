@@ -22,6 +22,7 @@ namespace LegendaryImpactEventmanager
         m_ConfigStore(m_SharedState),
         m_EventService(m_SharedState, m_HttpClient),
         m_ReminderService(m_SharedState),
+        m_SquadManager(m_SharedState),
         m_EventWindow(
             m_Api,
             m_SharedState,
@@ -47,9 +48,9 @@ namespace LegendaryImpactEventmanager
         ImGui::SetAllocatorFunctions(
             (void* (*)(size_t, void*))m_Api->ImguiMalloc,
             (void (*)(void*, void*))m_Api->ImguiFree);
-
-        m_NexusLink = (NexusLinkData_t*)m_Api->DataLink_Get("DL_NEXUS_LINK");
-        m_MumbleLink = (Mumble::Data*)m_Api->DataLink_Get("DL_MUMBLE_LINK");
+ 
+        m_NexusLink = (NexusLinkData_t*)m_Api->DataLink_Get(DL_NEXUS_LINK);
+        m_MumbleLink = (Mumble::Data*)m_Api->DataLink_Get(DL_MUMBLE_LINK);
         m_RtApi = (RTAPI::RealTimeData*)m_Api->DataLink_Get(DL_RTAPI);
 
         if (!m_RtApi || (m_RtApi && m_RtApi->GameBuild == 0))
@@ -59,6 +60,7 @@ namespace LegendaryImpactEventmanager
 
         LoadResources();
         RegisterNexusHooks();
+        RegisterSquadHooks();
 
         m_ConfigStore.Load();
         m_EventService.LoadCachedEvents();
@@ -94,6 +96,9 @@ namespace LegendaryImpactEventmanager
             m_Worker.join();
         }
 
+        DeregisterSquadHooks();
+        m_SquadManager.Clear();
+
         DeregisterNexusHooks();
 
         m_NexusLink = nullptr;
@@ -105,16 +110,39 @@ namespace LegendaryImpactEventmanager
 
     void EventManagerApp::OnExtAddonLoaded(int* signature)
     {
+        if (!signature) return;
+
         auto* instance = GetInstance();
         if (!instance) return;
-        instance->HandleExtAddonLoaded(signature);
+
+        // RTAPI
+        if (*signature == RTAPI_SIG)
+        {
+            instance->m_RtApi = (RTAPI::RealTimeData*)instance->m_Api->DataLink_Get(DL_RTAPI);
+
+            if (instance->m_RtApi && instance->m_RtApi->GameBuild == 0)
+            {
+                instance->m_RtApi = nullptr;
+            }
+
+            instance->RegisterSquadHooks();
+        }
     }
 
     void EventManagerApp::OnExtAddonUnloaded(int* signature)
     {
+        if (!signature) return;
+
         auto* instance = GetInstance();
         if (!instance) return;
-        instance->HandleExtAddonUnloaded(signature);
+
+        // RTAPI
+        if (*signature == RTAPI_SIG)
+        {
+            instance->DeregisterSquadHooks();
+            instance->m_RtApi = nullptr;
+            instance->m_SquadManager.Clear();
+        }
     }
 
     void EventManagerApp::LoadResources()
@@ -123,33 +151,28 @@ namespace LegendaryImpactEventmanager
         m_Api->Textures_LoadFromResource(Constants::IconHoverId, IDB_PNG2, m_Self, nullptr);
         m_Api->Textures_LoadFromResource(Constants::QuicknessIconId, IDB_PNG3, m_Self, nullptr);
         m_Api->Textures_LoadFromResource(Constants::AlacrityIconId, IDB_PNG4, m_Self, nullptr);
+        m_Api->Textures_LoadFromResource(Constants::SquadIconId, IDB_PNG5, m_Self, nullptr);
+        m_Api->Textures_LoadFromResource(Constants::NoSquadIconId, IDB_PNG6, m_Self, nullptr);
     }
 
-    void EventManagerApp::HandleExtAddonLoaded(int* signature)
+    void EventManagerApp::OnSquadUpdate(RTAPI::GroupMember* aGroupMember)
     {
-        if (!signature) return;
+        if (!aGroupMember) return;
 
-        // RTAPI
-        if (*signature == RTAPI_SIG)
-        {
-            m_RtApi = (RTAPI::RealTimeData*)m_Api->DataLink_Get(DL_RTAPI);
+        auto* instance = GetInstance();
+        if (!instance) return;
 
-            if (m_RtApi && m_RtApi->GameBuild == 0)
-            {
-                m_RtApi = nullptr;
-            }
-        }
+        instance->m_SquadManager.UpdateMember(aGroupMember);
     }
 
-    void EventManagerApp::HandleExtAddonUnloaded(int* signature)
+    void EventManagerApp::OnSquadLeave(RTAPI::GroupMember* aGroupMember)
     {
-        if (!signature) return;
+        if (!aGroupMember) return;
 
-        // RTAPI
-        if (*signature == RTAPI_SIG)
-        {
-            m_RtApi = nullptr;
-        }
+        auto* instance = GetInstance();
+        if (!instance) return;
+
+        instance->m_SquadManager.RemoveMember(aGroupMember);
     }
 
     void EventManagerApp::RegisterNexusHooks()
@@ -166,8 +189,8 @@ namespace LegendaryImpactEventmanager
         m_Api->GUI_Register(RT_Render, AddonRender);
         m_Api->GUI_Register(RT_OptionsRender, AddonOptions);
 
-        m_Api->Events_Subscribe("EV_ADDON_LOADED", (EVENT_CONSUME) EventManagerApp::OnExtAddonLoaded);
-        m_Api->Events_Subscribe("EV_ADDON_UNLOADED", (EVENT_CONSUME) EventManagerApp::OnExtAddonUnloaded);
+        m_Api->Events_Subscribe(EV_ADDON_LOADED, (EVENT_CONSUME) EventManagerApp::OnExtAddonLoaded);
+        m_Api->Events_Subscribe(EV_ADDON_UNLOADED, (EVENT_CONSUME) EventManagerApp::OnExtAddonUnloaded);
     }
 
     void EventManagerApp::DeregisterNexusHooks()
@@ -178,8 +201,30 @@ namespace LegendaryImpactEventmanager
         m_Api->GUI_Deregister(AddonRender);
         m_Api->GUI_Deregister(AddonOptions);
 
-        m_Api->Events_Unsubscribe("EV_ADDON_LOADED", (EVENT_CONSUME) EventManagerApp::OnExtAddonLoaded);
-        m_Api->Events_Unsubscribe("EV_ADDON_UNLOADED", (EVENT_CONSUME) EventManagerApp::OnExtAddonUnloaded);
+        m_Api->Events_Unsubscribe(EV_ADDON_LOADED, (EVENT_CONSUME) EventManagerApp::OnExtAddonLoaded);
+        m_Api->Events_Unsubscribe(EV_ADDON_UNLOADED, (EVENT_CONSUME) EventManagerApp::OnExtAddonUnloaded);
+    }
+
+    void EventManagerApp::RegisterSquadHooks()
+    {
+        if (!m_Api || !m_RtApi || m_RtApi->GameBuild == 0 || m_SquadHooksRegistered) return;
+
+        m_Api->Events_Subscribe(EV_RTAPI_GROUP_MEMBER_JOINED, (EVENT_CONSUME) EventManagerApp::OnSquadUpdate);
+        m_Api->Events_Subscribe(EV_RTAPI_GROUP_MEMBER_UPDATED, (EVENT_CONSUME) EventManagerApp::OnSquadUpdate);
+        m_Api->Events_Subscribe(EV_RTAPI_GROUP_MEMBER_LEFT, (EVENT_CONSUME) EventManagerApp::OnSquadLeave);
+
+        m_SquadHooksRegistered = true;
+    }
+
+    void EventManagerApp::DeregisterSquadHooks()
+    {
+        if (!m_Api || !m_SquadHooksRegistered) return;
+
+        m_Api->Events_Unsubscribe(EV_RTAPI_GROUP_MEMBER_JOINED, (EVENT_CONSUME) EventManagerApp::OnSquadUpdate);
+        m_Api->Events_Unsubscribe(EV_RTAPI_GROUP_MEMBER_UPDATED, (EVENT_CONSUME) EventManagerApp::OnSquadUpdate);
+        m_Api->Events_Unsubscribe(EV_RTAPI_GROUP_MEMBER_LEFT, (EVENT_CONSUME) EventManagerApp::OnSquadLeave);
+
+        m_SquadHooksRegistered = false;
     }
 
     void EventManagerApp::Render()

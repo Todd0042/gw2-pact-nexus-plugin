@@ -24,9 +24,22 @@ namespace LegendaryImpactEventmanager
         return m_State.load(std::memory_order_acquire);
     }
 
-    void SharedState::SetState(std::shared_ptr<const PluginState> state)
+    void SharedState::UpdateState(const std::function<void(PluginState&)>& updater)
     {
-        m_State.store(std::move(state), std::memory_order_release);
+        auto current = m_State.load(std::memory_order_acquire);
+
+        while (current) {
+            auto next = std::make_shared<PluginState>(*current);
+            updater(*next);
+
+            if (m_State.compare_exchange_weak(
+                current,
+                next,
+                std::memory_order_acq_rel,
+                std::memory_order_acquire)) {
+                return;
+            }
+        }
     }
 
     bool SharedState::IsWindowShown() const

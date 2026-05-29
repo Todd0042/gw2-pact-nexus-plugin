@@ -4,6 +4,7 @@
 #include "imgui/imgui.h"
 #include "imgui/imgui_internal.h"
 #include <shellapi.h>
+#include <algorithm>
 
 namespace LegendaryImpactEventmanager
 {
@@ -50,6 +51,24 @@ namespace LegendaryImpactEventmanager
         }
     }
 
+    void EventWindow::RenderStatusIcon(bool active)
+    {
+        const char* textureId = active
+            ? Constants::SquadIconId
+            : Constants::NoSquadIconId;
+
+        Texture_t* texture = m_Api->Textures_Get(textureId);
+
+        if (!texture || !texture->Resource)
+        {
+            if (active) ImGui::TextColored(ImVec4(0.20f, 0.90f, 0.30f, 1.0f), "Ja");
+            else ImGui::TextColored(ImVec4(1.0f, 0.25f, 0.25f, 1.0f), "Nein");
+            return;
+        }
+
+        ImGui::Image((ImTextureID)texture->Resource, ImVec2(18.0f, 18.0f));
+    }
+
     void EventWindow::RenderBoonIcon(const std::string& boon)
     {
         const char* textureId = nullptr;
@@ -66,10 +85,22 @@ namespace LegendaryImpactEventmanager
     {
         const float iconSize = 22.0f;
         const float textHeight = ImGui::GetTextLineHeight();
+
         float startY = ImGui::GetCursorPosY();
-        if (!boon.empty()) ImGui::SetCursorPosY(startY + (iconSize - textHeight) * 0.5f);
+
+        if (!boon.empty())
+        {
+            ImGui::SetCursorPosY(startY + (iconSize - textHeight) * 0.5f);
+        }
+
         ImGui::TextColored(RoleColor(role), "%s", Utility::RoleLabel(role).c_str());
-        if (!boon.empty()) { ImGui::SameLine(); ImGui::SetCursorPosY(startY); RenderBoonIcon(boon); }
+
+        if (!boon.empty())
+        {
+            ImGui::SameLine();
+            ImGui::SetCursorPosY(startY);
+            RenderBoonIcon(boon);
+        }
     }
 
     void EventWindow::RenderMarkdownText(const std::string& text)
@@ -97,24 +128,64 @@ namespace LegendaryImpactEventmanager
     void EventWindow::RenderEventAttendeesTable(const EventItem& event)
     {
         if (event.attendees.empty()) { ImGui::TextDisabled("Keine Teilnehmerdaten vorhanden."); return; }
-        if (ImGui::BeginTable("attendeesTable", 4, ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg | ImGuiTableFlags_SizingStretchProp))
+
+        auto state = m_SharedState.GetState();
+        const bool showSquadColumn = m_RtApi && m_RtApi->GameBuild != 0;
+        const int columnCount = showSquadColumn ? 4 : 3;
+
+        if (ImGui::BeginTable("attendeesTable", columnCount, ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg | ImGuiTableFlags_SizingStretchProp))
         {
-            ImGui::TableSetupColumn("Spieler"); ImGui::TableSetupColumn("Rolle"); ImGui::TableSetupColumn("Boon"); ImGui::TableSetupColumn("Flex"); ImGui::TableHeadersRow();
+            if (showSquadColumn)
+            {
+                ImGui::TableSetupColumn("Squad", ImGuiTableColumnFlags_WidthFixed, 55.0f);
+            }
+
+            ImGui::TableSetupColumn("Spieler");
+            ImGui::TableSetupColumn("Rolle");
+            ImGui::TableSetupColumn("Flex");
+            ImGui::TableHeadersRow();
+
             for (const auto& attendee : event.attendees)
             {
                 ImGui::TableNextRow();
-                ImGui::TableSetColumnIndex(0);
-                auto state = m_SharedState.GetState();
+
+                int column = 0;
+
+                if (showSquadColumn)
+                {
+                    ImGui::TableSetColumnIndex(column++);
+
+                    bool inSquad = false;
+
+                    if (state && !attendee.gw2Account.empty())
+                    {
+                        const std::string attendeeAccount = SquadManager::NormalizeAccountName(attendee.gw2Account);
+
+                        inSquad = std::any_of(
+                            state->squadMembers.begin(),
+                            state->squadMembers.end(),
+                            [&](const SquadMember& member) {
+                                return SquadManager::NormalizeAccountName(member.accountName) == attendeeAccount;
+                            });
+                    }
+
+                    RenderStatusIcon(inSquad);
+                }
+
+                ImGui::TableSetColumnIndex(column++);
                 bool isSelf = state && !state->viewerGw2Account.empty() && attendee.gw2Account == state->viewerGw2Account;
+
                 if (isSelf) ImGui::TextColored(ImVec4(1.0f, 0.15f, 0.15f, 1.0f), "%s", Utility::DisplayUser(attendee.username, attendee.gw2Account).c_str());
                 else ImGui::TextUnformatted(Utility::DisplayUser(attendee.username, attendee.gw2Account).c_str());
 
-                ImGui::TableSetColumnIndex(1); ImGui::TextColored(RoleColor(attendee.role), "%s", Utility::RoleLabel(attendee.role).c_str());
-                ImGui::TableSetColumnIndex(2); RenderBoonIcon(attendee.boon);
-                ImGui::TableSetColumnIndex(3);
+                ImGui::TableSetColumnIndex(column++);
+                RenderRoleWithBoon(attendee.role, attendee.boon);
+
+                ImGui::TableSetColumnIndex(column++);
                 if (attendee.flexRoles.empty()) ImGui::TextDisabled("-");
                 else for (const auto& flex : attendee.flexRoles) RenderRoleWithBoon(flex.role, flex.boon);
             }
+
             ImGui::EndTable();
         }
     }
@@ -225,8 +296,7 @@ namespace LegendaryImpactEventmanager
                 }
 
                 ImGui::TableSetColumnIndex(5);
-                if (event.isViewerAttending) ImGui::TextColored(ImVec4(0.20f, 0.90f, 0.30f, 1.0f), "Ja");
-                else ImGui::TextColored(ImVec4(1.0f, 0.25f, 0.25f, 1.0f), "Nein");
+                RenderStatusIcon(event.isViewerAttending);
 
                 ImGui::TableSetColumnIndex(6);
                 if (!event.url.empty() && ImGui::Button("Web")) ShellExecuteA(nullptr, "open", event.url.c_str(), nullptr, nullptr, SW_SHOWNORMAL);

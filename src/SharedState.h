@@ -3,6 +3,7 @@
 #include "Models.h"
 #include <atomic>
 #include <memory>
+#include <functional>
 
 namespace LegendaryImpactEventmanager
 {
@@ -15,7 +16,7 @@ namespace LegendaryImpactEventmanager
         void SetConfig(std::shared_ptr<const PluginConfig> config);
 
         std::shared_ptr<const PluginState> GetState() const;
-        void SetState(std::shared_ptr<const PluginState> state);
+        void UpdateState(const std::function<void(PluginState&)>& updater);
 
         bool IsWindowShown() const;
         void SetWindowShown(bool value);

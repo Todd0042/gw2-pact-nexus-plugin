@@ -47,6 +47,15 @@ namespace LegendaryImpactEventmanager
         std::vector<EventAttendee> attendees;
     };
 
+    struct SquadMember {
+        std::string accountName;
+        std::string characterName;
+        int subgroup = 0;
+        bool isCommander = false;
+        bool isLieutenant = false;
+        bool isSelf = false;
+    };
+
     struct PluginState
     {
         std::string lastSync = "-";
@@ -54,5 +63,6 @@ namespace LegendaryImpactEventmanager
         std::string viewerGw2Account = "";
         std::vector<EventItem> events;
         std::vector<EventItem> newEvents;
+        std::vector<SquadMember> squadMembers;
     };
 }

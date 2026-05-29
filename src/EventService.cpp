@@ -111,17 +111,9 @@ namespace LegendaryImpactEventmanager
 
     void EventService::StoreError(const std::string& error)
     {
-        auto oldState = m_SharedState.GetState();
-        auto nextState = std::make_shared<PluginState>();
-        if (oldState)
-        {
-            nextState->events = oldState->events;
-            nextState->viewerUsername = oldState->viewerUsername;
-            nextState->viewerGw2Account = oldState->viewerGw2Account;
-            nextState->lastSync = oldState->lastSync;
-        }
-        nextState->lastSync = "Fehler: " + Utility::UiText(error);
-        m_SharedState.SetState(nextState);
+        m_SharedState.UpdateState([&](PluginState& state) {
+            state.lastSync = "Fehler: " + Utility::UiText(error);
+            });
     }
 
     void EventService::FetchEvents()
@@ -245,7 +237,14 @@ namespace LegendaryImpactEventmanager
                     nextState->events.push_back(event);
                 }
             }
-            m_SharedState.SetState(nextState);
+            m_SharedState.UpdateState([&](PluginState& state) {
+                state.lastSync = nextState->lastSync;
+                state.viewerUsername = nextState->viewerUsername;
+                state.viewerGw2Account = nextState->viewerGw2Account;
+                state.events = nextState->events;
+                state.newEvents = nextState->newEvents;
+                });
+
             SaveCachedEvents(*nextState);
         }
         catch (const std::exception& ex)
@@ -259,36 +258,36 @@ namespace LegendaryImpactEventmanager
     void EventService::LoadCachedEvents()
     {
         std::ifstream file(Constants::EventsCacheFile);
-
-        if (!file.is_open())
-        {
-            return;
-        }
+        if (!file.is_open()) return;
 
         try
         {
             json data;
             file >> data;
 
-            auto state = std::make_shared<PluginState>();
+            auto cachedState = std::make_shared<PluginState>();
 
-            state->lastSync = data.value("lastSync", "-");
-            state->viewerUsername = data.value("viewerUsername", "");
-            state->viewerGw2Account = data.value("viewerGw2Account", "");
+            cachedState->lastSync = data.value("lastSync", "-");
+            cachedState->viewerUsername = data.value("viewerUsername", "");
+            cachedState->viewerGw2Account = data.value("viewerGw2Account", "");
 
             if (data.contains("events") && data["events"].is_array())
             {
                 for (const auto& item : data["events"])
                 {
-                    state->events.push_back(EventFromJson(item));
+                    cachedState->events.push_back(EventFromJson(item));
                 }
             }
 
-            m_SharedState.SetState(state);
+            m_SharedState.UpdateState([&](PluginState& state) {
+                state.lastSync = cachedState->lastSync;
+                state.viewerUsername = cachedState->viewerUsername;
+                state.viewerGw2Account = cachedState->viewerGw2Account;
+                state.events = cachedState->events;
+                state.newEvents.clear();
+                });
         }
-        catch (...)
-        {
-        }
+        catch (...) {}
     }
 
     void EventService::SaveCachedEvents(const PluginState& state) const

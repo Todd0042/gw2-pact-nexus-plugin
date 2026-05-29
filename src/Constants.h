@@ -14,4 +14,6 @@ namespace LegendaryImpactEventmanager::Constants
     inline constexpr const char* IconHoverId = "ICON_LI_EVENTMANAGER_HOVER";
     inline constexpr const char* QuicknessIconId = "ICON_LI_QUICKNESS";
     inline constexpr const char* AlacrityIconId = "ICON_LI_ALACRITY";
+    inline constexpr const char* SquadIconId = "ICON_LI_SQUAD";
+    inline constexpr const char* NoSquadIconId = "ICON_LI_NOSQUAD";
 }

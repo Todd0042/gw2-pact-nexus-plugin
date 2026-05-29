@@ -194,6 +194,7 @@
     <ClInclude Include="RTAPI\RTAPI.h" />
     <ClInclude Include="RTAPI\RTAPI.hpp" />
     <ClInclude Include="SharedState.h" />
+    <ClInclude Include="SquadManager.h" />
     <ClInclude Include="Utility.h" />
   </ItemGroup>
   <ItemGroup>
@@ -210,13 +211,16 @@
     <ClCompile Include="imgui\imgui_widgets.cpp" />
     <ClCompile Include="ReminderService.cpp" />
     <ClCompile Include="SharedState.cpp" />
+    <ClCompile Include="SquadManager.cpp" />
     <ClCompile Include="Utility.cpp" />
   </ItemGroup>
   <ItemGroup>
     <Image Include="resources\alacrity.png" />
     <Image Include="resources\icon.png" />
     <Image Include="resources\icon_hover.png" />
+    <Image Include="resources\noSquad.png" />
     <Image Include="resources\quickness.png" />
+    <Image Include="resources\squad.png" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="LegendaryImpactNexus.rc" />

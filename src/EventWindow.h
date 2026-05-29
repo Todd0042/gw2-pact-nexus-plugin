@@ -6,6 +6,7 @@
 #include "SharedState.h"
 #include "RTAPI/RTAPI.hpp"
 #include "nexus/Nexus.h"
+#include "SquadManager.h"
 #include <functional>
 #include <string>
 #include <chrono>
@@ -33,6 +34,7 @@ namespace LegendaryImpactEventmanager
         void RenderBoonIcon(const std::string& boon);
         void RenderMarkdownText(const std::string& text);
         void RenderRtApiStatus();
+        void RenderStatusIcon(bool active);
 
         std::chrono::steady_clock::time_point m_LastManualSync{};
         std::string ViewerLabel(const PluginState& state) const;

@@ -5,6 +5,7 @@
 #include "EventWindow.h"
 #include "HttpClient.h"
 #include "ReminderService.h"
+#include "SquadManager.h"
 #include "SharedState.h"
 #include "nexus/Nexus.h"
 #include "mumble/Mumble.h"
@@ -24,9 +25,6 @@ namespace LegendaryImpactEventmanager
         void Load(AddonAPI_t* api);
         void Unload();
 
-        static void OnExtAddonLoaded(int* signature);
-        static void OnExtAddonUnloaded(int* signature);
-
         void Render();
         void RenderOptions();
 
@@ -38,14 +36,21 @@ namespace LegendaryImpactEventmanager
         static EventManagerApp* GetInstance();
         static EventManagerApp* s_Instance;
 
+        static void OnExtAddonLoaded(int* signature);
+        static void OnExtAddonUnloaded(int* signature);
+
         void WorkerLoop();
 
         void RegisterNexusHooks();
         void DeregisterNexusHooks();
+
+        void RegisterSquadHooks();
+        void DeregisterSquadHooks();
+
         void LoadResources();
 
-        void HandleExtAddonLoaded(int* signature);
-        void HandleExtAddonUnloaded(int* signature);
+        static void OnSquadUpdate(RTAPI::GroupMember* aGroupMember);
+        static void OnSquadLeave(RTAPI::GroupMember* aGroupMember);
 
         HMODULE m_Self = nullptr;
         AddonAPI_t* m_Api = nullptr;
@@ -60,9 +65,11 @@ namespace LegendaryImpactEventmanager
         EventService m_EventService;
         ReminderService m_ReminderService;
         EventWindow m_EventWindow;
+        SquadManager m_SquadManager;
 
         bool m_Running = false;
         bool m_ManualSyncRequested = false;
+        bool m_SquadHooksRegistered = false;
 
         std::thread m_Worker;
         std::mutex m_WorkerMutex;

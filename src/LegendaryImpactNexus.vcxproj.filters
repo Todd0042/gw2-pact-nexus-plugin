@@ -25,6 +25,7 @@
     <ClCompile Include="EventWindow.cpp" />
     <ClCompile Include="HttpClient.cpp" />
     <ClCompile Include="ReminderService.cpp" />
+    <ClCompile Include="SquadManager.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="imgui\imstb_truetype.h">
@@ -61,6 +62,7 @@
     <ClInclude Include="RTAPI\RTAPI.hpp" />
     <ClInclude Include="mumble\Mumble.h" />
     <ClInclude Include="nexus\Nexus.h" />
+    <ClInclude Include="SquadManager.h" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="imgui">
@@ -72,6 +74,8 @@
     <Image Include="resources\icon_hover.png" />
     <Image Include="resources\quickness.png" />
     <Image Include="resources\alacrity.png" />
+    <Image Include="resources\squad.png" />
+    <Image Include="resources\noSquad.png" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="LegendaryImpactNexus.rc" />
