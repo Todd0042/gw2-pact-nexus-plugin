@@ -3,6 +3,7 @@
 #include "imgui/imgui.h"
 #include <mmsystem.h>
 #include <algorithm>
+#include <unordered_set>
 #pragma comment(lib, "winmm.lib")
 
 namespace LegendaryImpactEventmanager
@@ -24,6 +25,20 @@ namespace LegendaryImpactEventmanager
         auto config = m_SharedState.GetConfig();
         if (!config || !config->reminderEnabled) return;
 
+        std::unordered_set<std::string> activeEventIds;
+
+        for (const auto& event : state.events)
+        {
+            if (!event.id.empty())
+            {
+                activeEventIds.insert(event.id);
+            }
+        }
+
+        std::erase_if(m_ReminderLastShown, [&](const auto& item) {
+            return !activeEventIds.contains(item.first);
+            });
+
         std::time_t now = std::time(nullptr);
 
         const int beforeSeconds = config->reminderMinutesBefore * 60;
@@ -32,6 +47,7 @@ namespace LegendaryImpactEventmanager
         for (const auto& event : state.events)
         {
             if (!event.isViewerAttending) continue;
+            if (event.id.empty()) continue;
 
             std::time_t startTime = 0;
 
@@ -41,17 +57,28 @@ namespace LegendaryImpactEventmanager
                 static_cast<int>(std::difftime(startTime, now));
 
             if (secondsUntilStart < 0 || secondsUntilStart > beforeSeconds) continue;
-            const std::time_t lastShown = m_ReminderLastShown[event.id];
 
-            if (lastShown > 0 && std::difftime(now, lastShown) < repeatSeconds) continue;
+            const auto reminderIt = m_ReminderLastShown.find(event.id);
+
+            if (reminderIt != m_ReminderLastShown.end() &&
+                reminderIt->second > 0 &&
+                std::difftime(now, reminderIt->second) < repeatSeconds)
+            {
+                continue;
+            }
+
             m_ReminderLastShown[event.id] = now;
 
             int minutesUntilStart = secondsUntilStart / 60;
             if (minutesUntilStart < 1) minutesUntilStart = 1;
 
-            ShowReminder(event.title, Utility::FormatGermanDateTime(event.start), event.tag, minutesUntilStart);
+            ShowReminder(
+                event.title,
+                Utility::FormatGermanDateTime(event.start),
+                event.tag,
+                minutesUntilStart);
 
-            break; // if not u get multiple messages
+            break;
         }
     }
 
@@ -320,6 +347,20 @@ namespace LegendaryImpactEventmanager
             return;
         }
 
+        std::unordered_set<std::string> activeEventIds;
+
+        for (const auto& event : state.events)
+        {
+            if (!event.id.empty())
+            {
+                activeEventIds.insert(event.id);
+            }
+        }
+
+        std::erase_if(m_NewEventAnnouncementShown, [&](const auto& item) {
+            return !activeEventIds.contains(item.first);
+            });
+
         std::vector<EventItem> eventsToShow;
 
         for (const auto& event : state.newEvents)
@@ -329,7 +370,7 @@ namespace LegendaryImpactEventmanager
                 continue;
             }
 
-            if (m_NewEventAnnouncementShown[event.id])
+            if (m_NewEventAnnouncementShown.find(event.id) != m_NewEventAnnouncementShown.end())
             {
                 continue;
             }

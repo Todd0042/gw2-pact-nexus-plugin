@@ -178,18 +178,33 @@ namespace LegendaryImpactEventmanager::Utility
     void CopyToClipboard(const std::string& text)
     {
         if (!OpenClipboard(nullptr)) return;
+       
         EmptyClipboard();
         HGLOBAL hMem = GlobalAlloc(GMEM_MOVEABLE, text.size() + 1);
-        if (hMem)
+
+        if (!hMem)
         {
-            void* ptr = GlobalLock(hMem);
-            if (ptr)
-            {
-                memcpy(ptr, text.c_str(), text.size() + 1);
-                GlobalUnlock(hMem);
-                SetClipboardData(CF_TEXT, hMem);
-            }
+            CloseClipboard();
+            return;
         }
+
+        void* ptr = GlobalLock(hMem);
+
+        if (!ptr)
+        {
+            GlobalFree(hMem);
+            CloseClipboard();
+            return;
+        }
+
+        memcpy(ptr, text.c_str(), text.size() + 1);
+        GlobalUnlock(hMem);
+
+        if (!SetClipboardData(CF_TEXT, hMem))
+        {
+            GlobalFree(hMem);
+        }
+
         CloseClipboard();
     }
 }

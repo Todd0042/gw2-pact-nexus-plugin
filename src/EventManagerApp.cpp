@@ -76,10 +76,9 @@ namespace LegendaryImpactEventmanager
 
     void EventManagerApp::Unload()
     {
-        if (!m_Api)
-        {
-            return;
-        }
+        if (!m_Api) return;
+
+        DeregisterSquadHooks();
 
         m_ConfigStore.Save();
 
@@ -96,7 +95,6 @@ namespace LegendaryImpactEventmanager
             m_Worker.join();
         }
 
-        DeregisterSquadHooks();
         m_SquadManager.Clear();
 
         DeregisterNexusHooks();
@@ -158,10 +156,9 @@ namespace LegendaryImpactEventmanager
     void EventManagerApp::OnSquadUpdate(RTAPI::GroupMember* aGroupMember)
     {
         if (!aGroupMember) return;
-
         auto* instance = GetInstance();
-        if (!instance) return;
 
+        if (!instance || !instance->m_Api) return;
         instance->m_SquadManager.UpdateMember(aGroupMember);
     }
 
@@ -170,7 +167,7 @@ namespace LegendaryImpactEventmanager
         if (!aGroupMember) return;
 
         auto* instance = GetInstance();
-        if (!instance) return;
+        if (!instance || !instance->m_Api) return;
 
         instance->m_SquadManager.RemoveMember(aGroupMember);
     }

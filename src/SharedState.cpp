@@ -28,15 +28,18 @@ namespace LegendaryImpactEventmanager
     {
         auto current = m_State.load(std::memory_order_acquire);
 
-        while (current) {
+        while (current)
+        {
             auto next = std::make_shared<PluginState>(*current);
+
             updater(*next);
 
             if (m_State.compare_exchange_weak(
                 current,
                 next,
-                std::memory_order_acq_rel,
-                std::memory_order_acquire)) {
+                std::memory_order_release,
+                std::memory_order_acquire))
+            {
                 return;
             }
         }
