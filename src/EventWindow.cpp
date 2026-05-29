@@ -129,15 +129,13 @@ namespace LegendaryImpactEventmanager
         if (!line.empty()) renderLine(line);
     }
 
-    void EventWindow::RenderEventAttendeesTable(const EventItem& event)
+    void EventWindow::RenderEventAttendeesTable(const EventItem& event, const PluginState& state)
     {
         if (event.attendees.empty())
         {
             ImGui::TextDisabled("Keine Teilnehmerdaten vorhanden.");
             return;
         }
-
-        auto state = m_SharedState.GetState();
 
         const bool showSquadColumn = m_RtApi && m_RtApi->GameBuild != 0;
         const int columnCount = showSquadColumn ? 4 : 3;
@@ -167,9 +165,8 @@ namespace LegendaryImpactEventmanager
                 int column = 0;
 
                 bool isSelf =
-                    state &&
-                    !state->viewerGw2Account.empty() &&
-                    attendee.gw2Account == state->viewerGw2Account;
+                    !state.viewerGw2Account.empty() &&
+                    attendee.gw2Account == state.viewerGw2Account;
 
                 if (showSquadColumn)
                 {
@@ -179,13 +176,13 @@ namespace LegendaryImpactEventmanager
                     std::string characterName;
                     uint32_t subGroup = 0;
 
-                    if (state && !attendee.gw2Account.empty())
+                    if (!attendee.gw2Account.empty())
                     {
                         const std::string attendeeAccount = SquadManager::NormalizeAccountName(attendee.gw2Account);
 
-                        for (const auto& member : state->squadMembers)
+                        for (const auto& member : state.squadMembers)
                         {
-                            if (SquadManager::NormalizeAccountName(member.accountName) == attendeeAccount)
+                            if (member.normalizedAccountName == attendeeAccount)
                             {
                                 inSquad = true;
                                 characterName = member.characterName;
@@ -262,15 +259,12 @@ namespace LegendaryImpactEventmanager
         }
     }
 
-    void EventWindow::RenderEventsWindow()
+    void EventWindow::RenderEventsWindow(const PluginState& state)
     {
-        auto state = m_SharedState.GetState();
-        if (!state) return;
-
         ImGui::TextUnformatted("Angemeldet als:");
         ImGui::SameLine();
-        ImGui::TextColored(ImVec4(0.95f, 0.80f, 0.35f, 1.0f), "%s", ViewerLabel(*state).c_str());
-        ImGui::Text("Letzter Sync: %s", state->lastSync.c_str());
+        ImGui::TextColored(ImVec4(0.95f, 0.80f, 0.35f, 1.0f), "%s", ViewerLabel(state).c_str());
+        ImGui::Text("Letzter Sync: %s", state.lastSync.c_str());
         RenderRtApiStatus();
         ImGui::Dummy(ImVec2(0.0f, 0.5f));
 
@@ -318,7 +312,7 @@ namespace LegendaryImpactEventmanager
 
         ImGui::Dummy(ImVec2(0.0f, 8.0f));
 
-        if (state->events.empty())
+        if (state.events.empty())
         {
             ImGui::TextDisabled("Keine Events vorhanden.");
             return;
@@ -341,7 +335,7 @@ namespace LegendaryImpactEventmanager
             ImGui::TableSetupColumn("Aktionen", ImGuiTableColumnFlags_WidthFixed);
             ImGui::TableHeadersRow();
 
-            for (const auto& event : state->events)
+            for (const auto& event : state.events)
             {
                 ImGui::PushID(event.id.c_str());
                 ImGui::TableNextRow();
@@ -379,8 +373,8 @@ namespace LegendaryImpactEventmanager
                 if (!event.leaderName.empty() || !event.leaderAccount.empty())
                 {
                     bool isSelfLeader =
-                        !state->viewerGw2Account.empty() &&
-                        event.leaderAccount == state->viewerGw2Account;
+                        !state.viewerGw2Account.empty() &&
+                        event.leaderAccount == state.viewerGw2Account;
 
                     if (isSelfLeader)
                     {
@@ -408,7 +402,7 @@ namespace LegendaryImpactEventmanager
 
                 if (ImGui::TreeNodeEx(attendeeLabel.c_str(), ImGuiTreeNodeFlags_SpanFullWidth))
                 {
-                    RenderEventAttendeesTable(event);
+                    RenderEventAttendeesTable(event, state);
                     ImGui::TreePop();
                 }
 
@@ -422,7 +416,7 @@ namespace LegendaryImpactEventmanager
                     ShellExecuteA(nullptr, "open", event.url.c_str(), nullptr, nullptr, SW_SHOWNORMAL);
                 }
 
-                if (!event.leaderAccount.empty())
+                if (!event.leaderAccount.empty() && event.slotCount > 5 && event.tag != "MEETING")
                 {
                     ImGui::SameLine();
 
@@ -441,13 +435,10 @@ namespace LegendaryImpactEventmanager
 
     void EventWindow::RenderAddonWindow()
     {
-        auto state = m_SharedState.GetState();
-
-        if (state)
-        {
-            m_ReminderService.CheckEventReminders(*state);
-            m_ReminderService.CheckNewEventAnnouncements(*state);
-        }
+        m_SharedState.WithStateRead([&](const PluginState& state) {
+            m_ReminderService.CheckEventReminders(state);
+            m_ReminderService.CheckNewEventAnnouncements(state);
+            });
 
         m_ReminderService.Render();
 
@@ -465,7 +456,9 @@ namespace LegendaryImpactEventmanager
         }
 
         m_SharedState.SetWindowShown(show);
-        RenderEventsWindow();
+        m_SharedState.WithStateRead([&](const PluginState& state) {
+            RenderEventsWindow(state);
+            });
 
         ImGui::End();
         ImGui::PopStyleVar();
@@ -477,14 +470,11 @@ namespace LegendaryImpactEventmanager
         ImGui::Text("Legendary Impact - Eventmanager");
         RenderRtApiStatus();
 
-        auto state = m_SharedState.GetState();
-
-        if (state)
-        {
+        m_SharedState.WithStateRead([&](const PluginState& state) {
             ImGui::TextUnformatted("Angemeldet als:");
             ImGui::SameLine();
-            ImGui::TextColored(ImVec4(0.95f, 0.80f, 0.35f, 1.0f), "%s", ViewerLabel(*state).c_str());
-        }
+            ImGui::TextColored(ImVec4(0.95f, 0.80f, 0.35f, 1.0f), "%s", ViewerLabel(state).c_str());
+            });
 
         bool show = m_SharedState.IsWindowShown();
 

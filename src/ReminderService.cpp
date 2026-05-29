@@ -361,11 +361,15 @@ namespace LegendaryImpactEventmanager
             return !activeEventIds.contains(item.first);
             });
 
+        std::unordered_set<std::string> newEventIds(
+            state.newEventIds.begin(),
+            state.newEventIds.end());
+
         std::vector<EventItem> eventsToShow;
 
-        for (const auto& event : state.newEvents)
+        for (const auto& event : state.events)
         {
-            if (event.id.empty())
+            if (event.id.empty() || !newEventIds.contains(event.id))
             {
                 continue;
             }

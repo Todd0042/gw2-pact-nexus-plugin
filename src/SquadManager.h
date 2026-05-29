@@ -14,7 +14,9 @@ namespace LegendaryImpactEventmanager
         explicit SquadManager(SharedState& sharedState);
 
         void UpdateMember(RTAPI::GroupMember* groupMember);
+        void UpdateMember(const SquadMember& member);
         void RemoveMember(RTAPI::GroupMember* groupMember);
+        void RemoveMemberByAccount(const std::string& accountName);
         void Clear();
 
         bool IsInSquad(const std::string& accountName) const;

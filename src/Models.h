@@ -57,6 +57,7 @@ namespace LegendaryImpactEventmanager
         bool isLieutenant = false;
         bool isSelf = false;
         bool isInInstance = false;
+        std::string normalizedAccountName;
     };
 
     struct PluginState
@@ -65,7 +66,7 @@ namespace LegendaryImpactEventmanager
         std::string viewerUsername = "";
         std::string viewerGw2Account = "";
         std::vector<EventItem> events;
-        std::vector<EventItem> newEvents;
+        std::vector<std::string> newEventIds;
         std::vector<SquadMember> squadMembers;
     };
 }

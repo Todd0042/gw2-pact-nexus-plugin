@@ -4,6 +4,7 @@
 #include "imgui/imgui.h"
 #include <chrono>
 #include <cstring>
+#include <utility>
 
 void AddonRender();
 void AddonOptions();
@@ -159,7 +160,20 @@ namespace LegendaryImpactEventmanager
         auto* instance = GetInstance();
 
         if (!instance || !instance->m_Api) return;
-        instance->m_SquadManager.UpdateMember(aGroupMember);
+
+        SquadMember member;
+        member.accountName = aGroupMember->AccountName;
+        member.characterName = aGroupMember->CharacterName;
+        member.subgroup = aGroupMember->Subgroup;
+        member.profession = aGroupMember->Profession;
+        member.eliteSpecialization = aGroupMember->EliteSpecialization;
+        member.isCommander = aGroupMember->IsCommander;
+        member.isLieutenant = aGroupMember->IsLieutenant;
+        member.isSelf = aGroupMember->IsSelf;
+        member.isInInstance = aGroupMember->IsInInstance;
+        member.normalizedAccountName = SquadManager::NormalizeAccountName(member.accountName);
+
+        instance->EnqueueSquadUpdate(member);
     }
 
     void EventManagerApp::OnSquadLeave(RTAPI::GroupMember* aGroupMember)
@@ -169,7 +183,7 @@ namespace LegendaryImpactEventmanager
         auto* instance = GetInstance();
         if (!instance || !instance->m_Api) return;
 
-        instance->m_SquadManager.RemoveMember(aGroupMember);
+        instance->EnqueueSquadRemove(aGroupMember->AccountName);
     }
 
     void EventManagerApp::RegisterNexusHooks()
@@ -236,15 +250,8 @@ namespace LegendaryImpactEventmanager
 
     void EventManagerApp::OnInputBind(const char* identifier, bool isRelease)
     {
-        if (isRelease || !identifier)
-        {
-            return;
-        }
-
-        if (std::strcmp(identifier, Constants::KeybindId) != 0)
-        {
-            return;
-        }
+        if (isRelease || !identifier) return;
+        if (std::strcmp(identifier, Constants::KeybindId) != 0) return;
 
         m_SharedState.ToggleWindowShown();
         m_ConfigStore.Save();
@@ -260,38 +267,79 @@ namespace LegendaryImpactEventmanager
         m_WorkerWake.notify_one();
     }
 
+    void EventManagerApp::EnqueueSquadUpdate(const SquadMember& member)
+    {
+        {
+            std::lock_guard<std::mutex> lock(m_WorkerMutex);
+            m_PendingSquadEvents.push_back(PendingSquadEvent{ false, member, {} });
+        }
+
+        m_WorkerWake.notify_one();
+    }
+
+    void EventManagerApp::EnqueueSquadRemove(const std::string& accountName)
+    {
+        {
+            std::lock_guard<std::mutex> lock(m_WorkerMutex);
+            PendingSquadEvent event;
+            event.remove = true;
+            event.accountName = accountName;
+            m_PendingSquadEvents.push_back(std::move(event));
+        }
+
+        m_WorkerWake.notify_one();
+    }
+
+    void EventManagerApp::ProcessPendingSquadEvents()
+    {
+        std::vector<PendingSquadEvent> events;
+
+        {
+            std::lock_guard<std::mutex> lock(m_WorkerMutex);
+            events.swap(m_PendingSquadEvents);
+        }
+
+        for (const auto& event : events)
+        {
+            if (event.remove) m_SquadManager.RemoveMemberByAccount(event.accountName);
+            else m_SquadManager.UpdateMember(event.member);
+        }
+    }
+
     void EventManagerApp::WorkerLoop()
     {
+        ProcessPendingSquadEvents();
         m_EventService.FetchEvents();
 
         while (true)
         {
             auto config = m_SharedState.GetConfig();
-
             int minutes = config ? config->refreshMinutes : 5;
 
-            if (minutes < 5)
-            {
-                minutes = 5;
-            }
+            if (minutes < 5) minutes = 5;
 
             std::unique_lock<std::mutex> lock(m_WorkerMutex);
 
-            m_WorkerWake.wait_for(lock, std::chrono::minutes(minutes), [this]()
+            const bool wokeForPredicate = m_WorkerWake.wait_for(lock, std::chrono::minutes(minutes), 
+                [this]() 
                 {
-                    return !m_Running || m_ManualSyncRequested;
+                    return !m_Running || m_ManualSyncRequested || !m_PendingSquadEvents.empty();
                 });
 
-            if (!m_Running)
-            {
-                break;
-            }
+            if (!m_Running) break;
 
+            const bool syncRequested = m_ManualSyncRequested;
+            const bool timeoutReached = !wokeForPredicate;
             m_ManualSyncRequested = false;
 
             lock.unlock();
 
-            m_EventService.FetchEvents();
+            ProcessPendingSquadEvents();
+
+            if (syncRequested || timeoutReached)
+            {
+                m_EventService.FetchEvents();
+            }
         }
     }
 }

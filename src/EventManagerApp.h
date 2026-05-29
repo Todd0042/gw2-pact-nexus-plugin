@@ -12,7 +12,9 @@
 #include "RTAPI/RTAPI.hpp"
 #include <condition_variable>
 #include <mutex>
+#include <string>
 #include <thread>
+#include <vector>
 
 namespace LegendaryImpactEventmanager
 {
@@ -40,6 +42,9 @@ namespace LegendaryImpactEventmanager
         static void OnExtAddonUnloaded(int* signature);
 
         void WorkerLoop();
+        void ProcessPendingSquadEvents();
+        void EnqueueSquadUpdate(const SquadMember& member);
+        void EnqueueSquadRemove(const std::string& accountName);
 
         void RegisterNexusHooks();
         void DeregisterNexusHooks();
@@ -70,6 +75,15 @@ namespace LegendaryImpactEventmanager
         bool m_Running = false;
         bool m_ManualSyncRequested = false;
         bool m_SquadHooksRegistered = false;
+
+        struct PendingSquadEvent
+        {
+            bool remove = false;
+            SquadMember member;
+            std::string accountName;
+        };
+
+        std::vector<PendingSquadEvent> m_PendingSquadEvents;
 
         std::thread m_Worker;
         std::mutex m_WorkerMutex;

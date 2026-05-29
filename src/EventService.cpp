@@ -5,6 +5,7 @@
 #include <fstream>
 #include <unordered_set>
 #include <direct.h>
+#include <utility>
 
 using json = nlohmann::json;
 
@@ -142,28 +143,26 @@ namespace LegendaryImpactEventmanager
 
         try
         {
-            auto oldState = m_SharedState.GetState();
             std::unordered_set<std::string> oldEventIds;
 
-            if (oldState)
-            {
-                for (const auto& event : oldState->events)
+            m_SharedState.WithStateRead([&](const PluginState& state) {
+                for (const auto& event : state.events)
                 {
                     if (!event.id.empty())
                     {
                         oldEventIds.insert(event.id);
                     }
                 }
-            }
+                });
 
             json data = json::parse(body);
-            auto nextState = std::make_shared<PluginState>();
-            nextState->lastSync = Utility::FormatLocalNow();
+            PluginState nextState;
+            nextState.lastSync = Utility::FormatLocalNow();
 
             if (data.contains("viewer") && data["viewer"].is_object())
             {
-                nextState->viewerUsername = Utility::UiText(JsonString(data["viewer"], "username"));
-                nextState->viewerGw2Account = Utility::UiText(JsonString(data["viewer"], "gw2Account"));
+                nextState.viewerUsername = Utility::UiText(JsonString(data["viewer"], "username"));
+                nextState.viewerGw2Account = Utility::UiText(JsonString(data["viewer"], "gw2Account"));
             }
 
             if (data.contains("events") && data["events"].is_array())
@@ -231,21 +230,21 @@ namespace LegendaryImpactEventmanager
                     }
                     if (!event.id.empty() && !oldEventIds.empty() && !oldEventIds.contains(event.id))
                     {
-                        nextState->newEvents.push_back(event);
+                        nextState.newEventIds.push_back(event.id);
                     }
 
-                    nextState->events.push_back(event);
+                    nextState.events.push_back(std::move(event));
                 }
             }
-            m_SharedState.UpdateState([&](PluginState& state) {
-                state.lastSync = nextState->lastSync;
-                state.viewerUsername = nextState->viewerUsername;
-                state.viewerGw2Account = nextState->viewerGw2Account;
-                state.events = nextState->events;
-                state.newEvents = nextState->newEvents;
-                });
+            SaveCachedEvents(nextState);
 
-            SaveCachedEvents(*nextState);
+            m_SharedState.UpdateState([&](PluginState& state) {
+                state.lastSync = std::move(nextState.lastSync);
+                state.viewerUsername = std::move(nextState.viewerUsername);
+                state.viewerGw2Account = std::move(nextState.viewerGw2Account);
+                state.events = std::move(nextState.events);
+                state.newEventIds = std::move(nextState.newEventIds);
+                });
         }
         catch (const std::exception& ex)
         {
@@ -265,26 +264,26 @@ namespace LegendaryImpactEventmanager
             json data;
             file >> data;
 
-            auto cachedState = std::make_shared<PluginState>();
+            PluginState cachedState;
 
-            cachedState->lastSync = data.value("lastSync", "-");
-            cachedState->viewerUsername = data.value("viewerUsername", "");
-            cachedState->viewerGw2Account = data.value("viewerGw2Account", "");
+            cachedState.lastSync = data.value("lastSync", "-");
+            cachedState.viewerUsername = data.value("viewerUsername", "");
+            cachedState.viewerGw2Account = data.value("viewerGw2Account", "");
 
             if (data.contains("events") && data["events"].is_array())
             {
                 for (const auto& item : data["events"])
                 {
-                    cachedState->events.push_back(EventFromJson(item));
+                    cachedState.events.push_back(EventFromJson(item));
                 }
             }
 
             m_SharedState.UpdateState([&](PluginState& state) {
-                state.lastSync = cachedState->lastSync;
-                state.viewerUsername = cachedState->viewerUsername;
-                state.viewerGw2Account = cachedState->viewerGw2Account;
-                state.events = cachedState->events;
-                state.newEvents.clear();
+                state.lastSync = std::move(cachedState.lastSync);
+                state.viewerUsername = std::move(cachedState.viewerUsername);
+                state.viewerGw2Account = std::move(cachedState.viewerGw2Account);
+                state.events = std::move(cachedState.events);
+                state.newEventIds.clear();
                 });
         }
         catch (...) {}

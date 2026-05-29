@@ -21,15 +21,23 @@ namespace LegendaryImpactEventmanager
         member.isLieutenant = groupMember->IsLieutenant;
         member.isSelf = groupMember->IsSelf;
         member.isInInstance = groupMember->IsInInstance;
+        member.normalizedAccountName = NormalizeAccountName(member.accountName);
+
+        UpdateMember(member);
+    }
+
+    void SquadManager::UpdateMember(const SquadMember& member)
+    {
+        if (member.normalizedAccountName.empty()) return;
 
         m_SharedState.UpdateState([&](PluginState& state) {
-            const std::string accountName = NormalizeAccountName(member.accountName);
+            const std::string& accountName = member.normalizedAccountName;
 
             auto it = std::find_if(
                 state.squadMembers.begin(),
                 state.squadMembers.end(),
                 [&](const SquadMember& existing) {
-                    return NormalizeAccountName(existing.accountName) == accountName;
+                    return existing.normalizedAccountName == accountName;
                 });
 
             if (it == state.squadMembers.end())
@@ -45,14 +53,17 @@ namespace LegendaryImpactEventmanager
     void SquadManager::RemoveMember(RTAPI::GroupMember* groupMember)
     {
         if (!groupMember) return;
+        RemoveMemberByAccount(groupMember->AccountName);
+    }
 
-        const std::string accountName = groupMember->AccountName;
+    void SquadManager::RemoveMemberByAccount(const std::string& accountName)
+    {
+        const std::string normalized = NormalizeAccountName(accountName);
+        if (normalized.empty()) return;
 
         m_SharedState.UpdateState([&](PluginState& state) {
-            const std::string normalized = NormalizeAccountName(accountName);
-
             std::erase_if(state.squadMembers, [&](const SquadMember& member) {
-                return NormalizeAccountName(member.accountName) == normalized;
+                return member.normalizedAccountName == normalized;
                 });
             });
     }
@@ -66,17 +77,19 @@ namespace LegendaryImpactEventmanager
 
     bool SquadManager::IsInSquad(const std::string& accountName) const
     {
-        auto state = m_SharedState.GetState();
-        if (!state) return false;
-
         const std::string normalized = NormalizeAccountName(accountName);
+        bool found = false;
 
-        return std::any_of(
-            state->squadMembers.begin(),
-            state->squadMembers.end(),
-            [&](const SquadMember& member) {
-                return NormalizeAccountName(member.accountName) == normalized;
+        m_SharedState.WithStateRead([&](const PluginState& state) {
+            found = std::any_of(
+                state.squadMembers.begin(),
+                state.squadMembers.end(),
+                [&](const SquadMember& member) {
+                    return member.normalizedAccountName == normalized;
+                });
             });
+
+        return found;
     }
 
     std::string SquadManager::NormalizeAccountName(std::string value)

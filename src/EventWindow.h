@@ -28,8 +28,8 @@ namespace LegendaryImpactEventmanager
         void RenderOptions();
 
     private:
-        void RenderEventsWindow();
-        void RenderEventAttendeesTable(const EventItem& event);
+        void RenderEventsWindow(const PluginState& state);
+        void RenderEventAttendeesTable(const EventItem& event, const PluginState& state);
         void RenderRoleWithBoon(const std::string& role, const std::string& boon);
         void RenderBoonIcon(const std::string& boon);
         void RenderMarkdownText(const std::string& text);
