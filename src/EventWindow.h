@@ -16,7 +16,7 @@ namespace LegendaryImpactEventmanager
     {
     public:
         EventWindow(
-            AddonAPI*& api, 
+            AddonAPI_t*& api, 
             SharedState& sharedState,
             ConfigStore& configStore, 
             ReminderService& reminderService,
@@ -38,7 +38,7 @@ namespace LegendaryImpactEventmanager
         std::string ViewerLabel(const PluginState& state) const;
         ImVec4 RoleColor(const std::string& role) const;
 
-        AddonAPI*& m_Api;
+        AddonAPI_t*& m_Api;
         RTAPI::RealTimeData*& m_RtApi;
         SharedState& m_SharedState;
         ConfigStore& m_ConfigStore;

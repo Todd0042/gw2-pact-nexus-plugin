@@ -7,7 +7,7 @@ using namespace LegendaryImpactEventmanager;
 
 namespace
 {
-    AddonDefinition g_AddonDef = {};
+    AddonDefinition_t g_AddonDef = {};
     HMODULE g_Self = nullptr;
     std::unique_ptr<EventManagerApp> g_App;
 }
@@ -26,7 +26,7 @@ BOOL APIENTRY DllMain(HMODULE hModule, DWORD reason, LPVOID)
     return TRUE;
 }
 
-void AddonLoad(AddonAPI* api)
+void AddonLoad(AddonAPI_t* api)
 {
     g_App = std::make_unique<EventManagerApp>(g_Self);
     g_App->Load(api);
@@ -56,7 +56,7 @@ void OnInputBind(const char* identifier, bool isRelease)
     if (g_App) g_App->OnInputBind(identifier, isRelease);
 }
 
-extern "C" __declspec(dllexport) AddonDefinition* GetAddonDef()
+extern "C" __declspec(dllexport) AddonDefinition_t* GetAddonDef()
 {
     g_AddonDef.Signature = -84629;
     g_AddonDef.APIVersion = NEXUS_API_VERSION;
@@ -69,9 +69,9 @@ extern "C" __declspec(dllexport) AddonDefinition* GetAddonDef()
     g_AddonDef.Description = "Guild Wars 2 Eventmanager for Legendary Impact.";
     g_AddonDef.Load = AddonLoad;
     g_AddonDef.Unload = AddonUnload;
-    g_AddonDef.Flags = EAddonFlags_None;
+    g_AddonDef.Flags = AF_None;
 
-    g_AddonDef.Provider = EUpdateProvider_GitHub;
+    g_AddonDef.Provider = UP_GitHub;
     g_AddonDef.UpdateLink = "https://github.com/Backxtar/gw2-pact-nexus-plugin";
 
     return &g_AddonDef;

@@ -21,7 +21,7 @@ namespace LegendaryImpactEventmanager
         explicit EventManagerApp(HMODULE self);
         ~EventManagerApp();
 
-        void Load(AddonAPI* api);
+        void Load(AddonAPI_t* api);
         void Unload();
 
         static void OnExtAddonLoaded(int* signature);
@@ -48,9 +48,9 @@ namespace LegendaryImpactEventmanager
         void HandleExtAddonUnloaded(int* signature);
 
         HMODULE m_Self = nullptr;
-        AddonAPI* m_Api = nullptr;
+        AddonAPI_t* m_Api = nullptr;
 
-        NexusLinkData* m_NexusLink = nullptr;
+        NexusLinkData_t* m_NexusLink = nullptr;
         Mumble::Data* m_MumbleLink = nullptr;
         RTAPI::RealTimeData* m_RtApi = nullptr;
 

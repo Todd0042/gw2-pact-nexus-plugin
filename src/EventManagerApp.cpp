@@ -39,7 +39,7 @@ namespace LegendaryImpactEventmanager
         s_Instance = nullptr;
     }
 
-    void EventManagerApp::Load(AddonAPI* api)
+    void EventManagerApp::Load(AddonAPI_t* api)
     {
         m_Api = api;
 
@@ -48,9 +48,9 @@ namespace LegendaryImpactEventmanager
             (void* (*)(size_t, void*))m_Api->ImguiMalloc,
             (void (*)(void*, void*))m_Api->ImguiFree);
 
-        m_NexusLink = (NexusLinkData*)m_Api->DataLink.Get("DL_NEXUS_LINK");
-        m_MumbleLink = (Mumble::Data*)m_Api->DataLink.Get("DL_MUMBLE_LINK");
-        m_RtApi = (RTAPI::RealTimeData*)m_Api->DataLink.Get(DL_RTAPI);
+        m_NexusLink = (NexusLinkData_t*)m_Api->DataLink_Get("DL_NEXUS_LINK");
+        m_MumbleLink = (Mumble::Data*)m_Api->DataLink_Get("DL_MUMBLE_LINK");
+        m_RtApi = (RTAPI::RealTimeData*)m_Api->DataLink_Get(DL_RTAPI);
 
         if (!m_RtApi || (m_RtApi && m_RtApi->GameBuild == 0))
         {
@@ -70,11 +70,6 @@ namespace LegendaryImpactEventmanager
         }
 
         m_Worker = std::thread(&EventManagerApp::WorkerLoop, this);
-
-        m_Api->Log(
-            ELogLevel_DEBUG,
-            Constants::AddonName,
-            "Legendary Impact - Eventmanager was loaded.");
     }
 
     void EventManagerApp::Unload()
@@ -101,11 +96,6 @@ namespace LegendaryImpactEventmanager
 
         DeregisterNexusHooks();
 
-        m_Api->Log(
-            ELogLevel_DEBUG,
-            Constants::AddonName,
-            "Signing off Legendary Impact - Eventmanager, it was an honor commander.");
-
         m_NexusLink = nullptr;
         m_MumbleLink = nullptr;
         m_RtApi = nullptr;
@@ -129,10 +119,10 @@ namespace LegendaryImpactEventmanager
 
     void EventManagerApp::LoadResources()
     {
-        m_Api->Textures.LoadFromResource(Constants::IconId, IDB_PNG1, m_Self, nullptr);
-        m_Api->Textures.LoadFromResource(Constants::IconHoverId, IDB_PNG2, m_Self, nullptr);
-        m_Api->Textures.LoadFromResource(Constants::QuicknessIconId, IDB_PNG3, m_Self, nullptr);
-        m_Api->Textures.LoadFromResource(Constants::AlacrityIconId, IDB_PNG4, m_Self, nullptr);
+        m_Api->Textures_LoadFromResource(Constants::IconId, IDB_PNG1, m_Self, nullptr);
+        m_Api->Textures_LoadFromResource(Constants::IconHoverId, IDB_PNG2, m_Self, nullptr);
+        m_Api->Textures_LoadFromResource(Constants::QuicknessIconId, IDB_PNG3, m_Self, nullptr);
+        m_Api->Textures_LoadFromResource(Constants::AlacrityIconId, IDB_PNG4, m_Self, nullptr);
     }
 
     void EventManagerApp::HandleExtAddonLoaded(int* signature)
@@ -142,7 +132,7 @@ namespace LegendaryImpactEventmanager
         // RTAPI
         if (*signature == RTAPI_SIG)
         {
-            m_RtApi = (RTAPI::RealTimeData*)m_Api->DataLink.Get(DL_RTAPI);
+            m_RtApi = (RTAPI::RealTimeData*)m_Api->DataLink_Get(DL_RTAPI);
 
             if (m_RtApi && m_RtApi->GameBuild == 0)
             {
@@ -164,32 +154,32 @@ namespace LegendaryImpactEventmanager
 
     void EventManagerApp::RegisterNexusHooks()
     {
-        m_Api->InputBinds.RegisterWithString(Constants::KeybindId, ::OnInputBind, "F8");
+        m_Api->InputBinds_RegisterWithString(Constants::KeybindId, ::OnInputBind, "F8");
 
-        m_Api->QuickAccess.Add(
+        m_Api->QuickAccess_Add(
             Constants::QuickAccessId,
             Constants::IconId,
             Constants::IconHoverId,
             Constants::KeybindId,
             "Legendary Impact - Eventmanager");
+      
+        m_Api->GUI_Register(RT_Render, AddonRender);
+        m_Api->GUI_Register(RT_OptionsRender, AddonOptions);
 
-        m_Api->Renderer.Register(ERenderType_Render, AddonRender);
-        m_Api->Renderer.Register(ERenderType_OptionsRender, AddonOptions);
-
-        m_Api->Events.Subscribe("EV_ADDON_LOADED", (EVENT_CONSUME) EventManagerApp::OnExtAddonLoaded);
-        m_Api->Events.Subscribe("EV_ADDON_UNLOADED", (EVENT_CONSUME) EventManagerApp::OnExtAddonUnloaded);
+        m_Api->Events_Subscribe("EV_ADDON_LOADED", (EVENT_CONSUME) EventManagerApp::OnExtAddonLoaded);
+        m_Api->Events_Subscribe("EV_ADDON_UNLOADED", (EVENT_CONSUME) EventManagerApp::OnExtAddonUnloaded);
     }
 
     void EventManagerApp::DeregisterNexusHooks()
     {
-        m_Api->QuickAccess.Remove(Constants::QuickAccessId);
-        m_Api->InputBinds.Deregister(Constants::KeybindId);
+        m_Api->QuickAccess_Remove(Constants::QuickAccessId);
+        m_Api->InputBinds_Deregister(Constants::KeybindId);
 
-        m_Api->Renderer.Deregister(AddonRender);
-        m_Api->Renderer.Deregister(AddonOptions);
+        m_Api->GUI_Deregister(AddonRender);
+        m_Api->GUI_Deregister(AddonOptions);
 
-        m_Api->Events.Unsubscribe("EV_ADDON_LOADED", (EVENT_CONSUME) EventManagerApp::OnExtAddonLoaded);
-        m_Api->Events.Unsubscribe("EV_ADDON_UNLOADED", (EVENT_CONSUME) EventManagerApp::OnExtAddonUnloaded);
+        m_Api->Events_Unsubscribe("EV_ADDON_LOADED", (EVENT_CONSUME) EventManagerApp::OnExtAddonLoaded);
+        m_Api->Events_Unsubscribe("EV_ADDON_UNLOADED", (EVENT_CONSUME) EventManagerApp::OnExtAddonUnloaded);
     }
 
     void EventManagerApp::Render()

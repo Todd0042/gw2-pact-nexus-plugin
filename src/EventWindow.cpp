@@ -7,7 +7,7 @@
 
 namespace LegendaryImpactEventmanager
 {
-    EventWindow::EventWindow(AddonAPI*& api, SharedState& sharedState, ConfigStore& configStore, ReminderService& reminderService, RTAPI::RealTimeData*& rtApi, std::function<void()> syncNow)
+    EventWindow::EventWindow(AddonAPI_t*& api, SharedState& sharedState, ConfigStore& configStore, ReminderService& reminderService, RTAPI::RealTimeData*& rtApi, std::function<void()> syncNow)
         : m_Api(api), m_SharedState(sharedState), m_ConfigStore(configStore), m_ReminderService(reminderService), m_RtApi(rtApi), m_SyncNow(std::move(syncNow)) {
     }
 
@@ -57,7 +57,7 @@ namespace LegendaryImpactEventmanager
         else if (boon == "ALACRITY") textureId = Constants::AlacrityIconId;
 
         if (!textureId) { ImGui::TextDisabled("-"); return; }
-        Texture* texture = m_Api->Textures.Get(textureId);
+        Texture_t* texture = m_Api->Textures_Get(textureId);
         if (!texture || !texture->Resource) { ImGui::TextDisabled("%s", Utility::BoonLabel(boon).c_str()); return; }
         ImGui::Image((ImTextureID)texture->Resource, ImVec2(22.0f, 22.0f));
     }

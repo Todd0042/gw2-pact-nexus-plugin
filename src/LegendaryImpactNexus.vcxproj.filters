@@ -45,8 +45,6 @@
     <ClInclude Include="imgui\imconfig.h">
       <Filter>imgui</Filter>
     </ClInclude>
-    <ClInclude Include="nexus\Nexus.h" />
-    <ClInclude Include="mumble\Mumble.h" />
     <ClInclude Include="nlohmann\json.hpp" />
     <ClInclude Include="resource.h" />
     <ClInclude Include="Constants.h" />
@@ -61,6 +59,8 @@
     <ClInclude Include="ReminderService.h" />
     <ClInclude Include="RTAPI\RTAPI.h" />
     <ClInclude Include="RTAPI\RTAPI.hpp" />
+    <ClInclude Include="mumble\Mumble.h" />
+    <ClInclude Include="nexus\Nexus.h" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="imgui">
