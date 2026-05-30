@@ -29,6 +29,7 @@ namespace LegendaryImpactEventmanager
         void UpdateState(const std::function<void(PluginState&)>& updater);
 
         bool IsWindowShown() const;
+        bool* GetWindowShownPtr();
         void SetWindowShown(bool value);
         void ToggleWindowShown();
 

@@ -484,9 +484,7 @@ namespace LegendaryImpactEventmanager
         }
 
         m_SharedState.SetWindowShown(show);
-        m_SharedState.WithStateRead([&](const PluginState& state) {
-            RenderEventsWindow(state);
-            });
+        m_SharedState.WithStateRead([&](const PluginState& state) { RenderEventsWindow(state); });
 
         ImGui::End();
         ImGui::PopStyleVar();

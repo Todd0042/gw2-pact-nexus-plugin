@@ -202,6 +202,7 @@ namespace LegendaryImpactEventmanager
       
         m_Api->GUI_Register(RT_Render, AddonRender);
         m_Api->GUI_Register(RT_OptionsRender, AddonOptions);
+        m_Api->GUI_RegisterCloseOnEscape("Legendary Impact - Eventmanager###LegendaryImpactEventmanagerWindow", m_SharedState.GetWindowShownPtr());
 
         m_Api->Events_Subscribe(EV_ADDON_LOADED, (EVENT_CONSUME) EventManagerApp::OnExtAddonLoaded);
         m_Api->Events_Subscribe(EV_ADDON_UNLOADED, (EVENT_CONSUME) EventManagerApp::OnExtAddonUnloaded);
@@ -215,6 +216,7 @@ namespace LegendaryImpactEventmanager
 
         m_Api->GUI_Deregister(AddonRender);
         m_Api->GUI_Deregister(AddonOptions);
+        m_Api->GUI_DeregisterCloseOnEscape("Legendary Impact - Eventmanager###LegendaryImpactEventmanagerWindow");
 
         m_Api->Events_Unsubscribe(EV_ADDON_LOADED, (EVENT_CONSUME) EventManagerApp::OnExtAddonLoaded);
         m_Api->Events_Unsubscribe(EV_ADDON_UNLOADED, (EVENT_CONSUME) EventManagerApp::OnExtAddonUnloaded);

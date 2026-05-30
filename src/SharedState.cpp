@@ -47,6 +47,11 @@ namespace LegendaryImpactEventmanager
         return m_ShowWindow;
     }
 
+    bool* SharedState::GetWindowShownPtr()
+    {
+        return &m_ShowWindow;
+    }
+
     void SharedState::SetWindowShown(bool value)
     {
         m_ShowWindow = value;
