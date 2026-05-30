@@ -266,7 +266,7 @@ namespace LegendaryImpactEventmanager
         if (std::strcmp(identifier, Constants::KeybindCloseAllId) == 0)
         {
             m_SharedState.SetWindowShown(false);
-            m_ReminderService.CloseAllWindows();
+            m_SharedState.CloseAllReminderWindows();
             return;
         }
     }

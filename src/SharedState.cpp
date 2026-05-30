@@ -44,23 +44,132 @@ namespace LegendaryImpactEventmanager
 
     bool SharedState::IsWindowShown() const
     {
-        return m_ShowWindow.load(std::memory_order_relaxed);
+        return m_ShowWindow;
     }
 
     void SharedState::SetWindowShown(bool value)
     {
-        m_ShowWindow.store(value, std::memory_order_relaxed);
+        m_ShowWindow = value;
     }
 
     void SharedState::ToggleWindowShown()
     {
-        bool oldValue = m_ShowWindow.load(std::memory_order_relaxed);
+        m_ShowWindow = !m_ShowWindow;
+    }
 
-        while (!m_ShowWindow.compare_exchange_weak(
-            oldValue,
-            !oldValue,
-            std::memory_order_relaxed,
-            std::memory_order_relaxed)) {}
+    bool SharedState::IsReminderWindowShown() const
+    {
+        std::shared_lock lock(m_ReminderMutex);
+        return m_ShowReminderMessage;
+    }
+
+    std::vector<EventItem> SharedState::GetReminderEvents() const
+    {
+        std::shared_lock lock(m_ReminderMutex);
+        return m_UpcommingEvents;
+    }
+
+    void SharedState::SetReminderEvents(const std::vector<EventItem>& events)
+    {
+        std::unique_lock lock(m_ReminderMutex);
+        m_UpcommingEvents = events;
+        m_ShowReminderMessage = !m_UpcommingEvents.empty();
+    }
+
+    void SharedState::CloseReminderWindow()
+    {
+        std::unique_lock lock(m_ReminderMutex);
+        m_ShowReminderMessage = false;
+        m_UpcommingEvents.clear();
+        m_UpcommingEvents.shrink_to_fit();
+    }
+
+    bool SharedState::IsNewEventsWindowShown() const
+    {
+        std::shared_lock lock(m_ReminderMutex);
+        return m_ShowNewEventsMessage;
+    }
+
+    std::vector<EventItem> SharedState::GetNewEvents() const
+    {
+        std::shared_lock lock(m_ReminderMutex);
+        return m_NewEvents;
+    }
+
+    void SharedState::SetNewEvents(const std::vector<EventItem>& events)
+    {
+        std::unique_lock lock(m_ReminderMutex);
+        m_NewEvents = events;
+        m_ShowNewEventsMessage = !m_NewEvents.empty();
+    }
+
+    void SharedState::CloseNewEventsWindow()
+    {
+        std::unique_lock lock(m_ReminderMutex);
+        m_ShowNewEventsMessage = false;
+        m_NewEvents.clear();
+        m_NewEvents.shrink_to_fit();
+    }
+
+    void SharedState::CloseAllReminderWindows()
+    {
+        CloseReminderWindow();
+        CloseNewEventsWindow();
+    }
+
+    bool SharedState::IsAnyReminderWindowOpen() const
+    {
+        std::shared_lock lock(m_ReminderMutex);
+        return m_ShowReminderMessage || m_ShowNewEventsMessage;
+    }
+
+    void SharedState::CleanupReminderLastShown(const std::unordered_set<std::string>& activeEventIds)
+    {
+        std::unique_lock lock(m_ReminderMutex);
+        std::erase_if(m_ReminderLastShown, [&](const auto& item) {
+            return !activeEventIds.contains(item.first);
+            });
+    }
+
+    bool SharedState::MarkReminderShownIfAllowed(const std::string& eventId, std::time_t now, int repeatSeconds)
+    {
+        if (eventId.empty()) return false;
+
+        std::unique_lock lock(m_ReminderMutex);
+
+        const auto reminderIt = m_ReminderLastShown.find(eventId);
+        if (reminderIt != m_ReminderLastShown.end() &&
+            reminderIt->second > 0 &&
+            std::difftime(now, reminderIt->second) < repeatSeconds)
+        {
+            return false;
+        }
+
+        m_ReminderLastShown[eventId] = now;
+        return true;
+    }
+
+    void SharedState::CleanupNewEventAnnouncementShown(const std::unordered_set<std::string>& activeEventIds)
+    {
+        std::unique_lock lock(m_ReminderMutex);
+        std::erase_if(m_NewEventAnnouncementShown, [&](const auto& item) {
+            return !activeEventIds.contains(item.first);
+            });
+    }
+
+    bool SharedState::MarkNewEventAnnouncementShownIfNeeded(const std::string& eventId)
+    {
+        if (eventId.empty()) return false;
+
+        std::unique_lock lock(m_ReminderMutex);
+
+        if (m_NewEventAnnouncementShown.find(eventId) != m_NewEventAnnouncementShown.end())
+        {
+            return false;
+        }
+
+        m_NewEventAnnouncementShown[eventId] = true;
+        return true;
     }
 
     bool SharedState::IsFetching() const

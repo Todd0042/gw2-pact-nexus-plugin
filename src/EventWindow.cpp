@@ -439,7 +439,7 @@ namespace LegendaryImpactEventmanager
 
                 ImGui::TableSetColumnIndex(6);
 
-                if (!event.url.empty() && ImGui::Button("Web"))
+                if (!event.url.empty() && ImGui::Button("Event anzeigen"))
                 {
                     ShellExecuteA(nullptr, "open", event.url.c_str(), nullptr, nullptr, SW_SHOWNORMAL);
                 }
@@ -448,7 +448,7 @@ namespace LegendaryImpactEventmanager
                 {
                     ImGui::SameLine();
 
-                    if (ImGui::Button("SqJoin"))
+                    if (ImGui::Button("Squad beitreten"))
                     {
                         Utility::CopyToClipboard("/sqjoin " + event.leaderAccount);
                     }
@@ -555,7 +555,7 @@ namespace LegendaryImpactEventmanager
             std::vector<EventItem> testEvents;
 
             EventItem raid;
-            raid.title = "Wing 4 Fullclear";
+            raid.title = "Wing 4 Fullclear (Auch fuer Anfaenger)";
             raid.start = "2025-01-15T19:00:00";
             raid.tag = "RAID";
 
