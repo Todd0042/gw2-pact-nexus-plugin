@@ -133,20 +133,59 @@ namespace LegendaryImpactEventmanager
     void EventWindow::RenderMarkdownText(const std::string& text)
     {
         std::string line;
-        auto renderLine = [](const std::string& raw)
+
+        auto trimLeft = [](std::string value)
+            {
+                while (!value.empty() && (value.front() == ' ' || value.front() == '\t'))
+                    value.erase(value.begin());
+
+                return value;
+            };
+
+        auto renderLine = [&](const std::string& raw)
             {
                 std::string line = Utility::StripSimpleMarkdown(raw);
+                line = trimLeft(line);
+
                 if (line.empty()) { ImGui::Spacing(); return; }
-                if (line == "---") return;
-                if (line.rfind("### ", 0) == 0) ImGui::TextColored(ImVec4(0.90f, 0.75f, 0.35f, 1.0f), "%s", line.substr(4).c_str());
-                else if (line.rfind("## ", 0) == 0) ImGui::TextColored(ImVec4(1.0f, 0.85f, 0.45f, 1.0f), "%s", line.substr(3).c_str());
-                else if (line.rfind("# ", 0) == 0) ImGui::TextColored(ImVec4(1.0f, 0.9f, 0.55f, 1.0f), "%s", line.substr(2).c_str());
-                else if (line.rfind("- ", 0) == 0 || line.rfind("* ", 0) == 0) ImGui::BulletText("%s", line.substr(2).c_str());
-                else ImGui::TextWrapped("%s", line.c_str());
+                if (line == "---" || line == "***" || line == "___") return;
+
+                if (line.rfind("###", 0) == 0)
+                    ImGui::TextColored(ImVec4(0.90f, 0.75f, 0.35f, 1.0f), "%s", trimLeft(line.substr(3)).c_str());
+                else if (line.rfind("##", 0) == 0)
+                    ImGui::TextColored(ImVec4(1.0f, 0.85f, 0.45f, 1.0f), "%s", trimLeft(line.substr(2)).c_str());
+                else if (line.rfind("#", 0) == 0)
+                    ImGui::TextColored(ImVec4(1.0f, 0.9f, 0.55f, 1.0f), "%s", trimLeft(line.substr(1)).c_str());
+                else if (line.rfind("> ", 0) == 0)
+                    ImGui::TextDisabled("%s", line.substr(2).c_str());
+                else if (line.rfind("- [ ] ", 0) == 0 || line.rfind("* [ ] ", 0) == 0)
+                    ImGui::BulletText("[ ] %s", line.substr(6).c_str());
+                else if (line.rfind("- [x] ", 0) == 0 || line.rfind("* [x] ", 0) == 0 ||
+                    line.rfind("- [X] ", 0) == 0 || line.rfind("* [X] ", 0) == 0)
+                    ImGui::BulletText("[x] %s", line.substr(6).c_str());
+                else if (line.size() >= 2 &&
+                    (line[0] == '-' || line[0] == '*' || line[0] == '+') &&
+                    line[1] == ' ')
+                    ImGui::BulletText("%s", line.substr(2).c_str());
+                else
+                {
+                    size_t dot = line.find(". ");
+
+                    bool orderedList = dot != std::string::npos && dot > 0;
+                    for (size_t i = 0; orderedList && i < dot; ++i)
+                        if (!std::isdigit(static_cast<unsigned char>(line[i])))
+                            orderedList = false;
+
+                    if (orderedList)
+                        ImGui::BulletText("%s", line.substr(dot + 2).c_str());
+                    else
+                        ImGui::TextWrapped("%s", line.c_str());
+                }
             };
 
         for (char c : text)
         {
+            if (c == '\r') continue;
             if (c == '\n') { renderLine(line); line.clear(); }
             else line += c;
         }

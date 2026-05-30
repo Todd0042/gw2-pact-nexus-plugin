@@ -1,6 +1,10 @@
 ﻿#include "Utility.h"
 #include <cstdio>
 #include <cstring>
+#include <string>
+#include <algorithm>
+#include <cctype>
+#include <cstdint>
 
 namespace LegendaryImpactEventmanager::Utility
 {
@@ -14,31 +18,110 @@ namespace LegendaryImpactEventmanager::Utility
         }
     }
 
-    std::string StripUnsupportedEmoji(const std::string& input)
+    std::string StripEmojis(const std::string& input)
     {
         std::string out;
+        out.reserve(input.size());
+
         for (size_t i = 0; i < input.size();)
         {
             unsigned char c = static_cast<unsigned char>(input[i]);
-            if (c < 0x80) { out += input[i++]; continue; }
 
-            int len = 0;
-            if ((c & 0xE0) == 0xC0) len = 2;
-            else if ((c & 0xF0) == 0xE0) len = 3;
-            else if ((c & 0xF8) == 0xF0) len = 4;
-            else { ++i; continue; }
+            uint32_t cp = 0;
+            size_t len = 0;
 
-            if (i + len > input.size()) break;
+            if (c < 0x80) { cp = c; len = 1; }
+            else if ((c & 0xE0) == 0xC0 && i + 1 < input.size())
+            {
+                cp = ((c & 0x1F) << 6) |
+                    (static_cast<unsigned char>(input[i + 1]) & 0x3F);
+                len = 2;
+            }
+            else if ((c & 0xF0) == 0xE0 && i + 2 < input.size())
+            {
+                cp = ((c & 0x0F) << 12) |
+                    ((static_cast<unsigned char>(input[i + 1]) & 0x3F) << 6) |
+                    (static_cast<unsigned char>(input[i + 2]) & 0x3F);
+                len = 3;
+            }
+            else if ((c & 0xF8) == 0xF0 && i + 3 < input.size())
+            {
+                cp = ((c & 0x07) << 18) |
+                    ((static_cast<unsigned char>(input[i + 1]) & 0x3F) << 12) |
+                    ((static_cast<unsigned char>(input[i + 2]) & 0x3F) << 6) |
+                    (static_cast<unsigned char>(input[i + 3]) & 0x3F);
+                len = 4;
+            }
+            else
+            {
+                ++i;
+                continue;
+            }
 
-            unsigned int cp = 0;
-            if (len == 2) cp = ((input[i] & 0x1F) << 6) | (input[i + 1] & 0x3F);
-            else if (len == 3) cp = ((input[i] & 0x0F) << 12) | ((input[i + 1] & 0x3F) << 6) | (input[i + 2] & 0x3F);
-            else cp = ((input[i] & 0x07) << 18) | ((input[i + 1] & 0x3F) << 12) | ((input[i + 2] & 0x3F) << 6) | (input[i + 3] & 0x3F);
+            bool isEmoji =
+                (cp >= 0x1F000 && cp <= 0x1FFFF) ||
+                (cp >= 0x2600 && cp <= 0x27BF) ||
+                (cp >= 0x2300 && cp <= 0x23FF) ||
+                (cp >= 0x2B00 && cp <= 0x2BFF) ||
+                (cp >= 0xFE00 && cp <= 0xFE0F) ||
+                (cp >= 0x1F3FB && cp <= 0x1F3FF) ||
+                (cp == 0x200D);
 
-            bool remove = (cp >= 0x1F000 && cp <= 0x1FAFF) || (cp >= 0x2600 && cp <= 0x27BF) || (cp >= 0xFE00 && cp <= 0xFE0F) || (cp == 0x200D);
-            if (!remove) out.append(input, i, len);
+            if (!isEmoji)
+                out.append(input, i, len);
+
             i += len;
         }
+
+        return out;
+    }
+
+    std::string FixSpacesAfterEmojiStrip(std::string text)
+    {
+        std::string out;
+        out.reserve(text.size());
+
+        bool lineStart = true;
+        bool lastWasSpace = false;
+
+        for (char ch : text)
+        {
+            if (ch == '\r')
+                continue;
+
+            if (ch == '\n')
+            {
+                while (!out.empty() && out.back() == ' ')
+                    out.pop_back();
+
+                out += '\n';
+                lineStart = true;
+                lastWasSpace = false;
+                continue;
+            }
+
+            if (ch == ' ')
+            {
+                if (lineStart)
+                    continue;
+
+                if (!lastWasSpace)
+                {
+                    out += ' ';
+                    lastWasSpace = true;
+                }
+
+                continue;
+            }
+
+            out += ch;
+            lineStart = false;
+            lastWasSpace = false;
+        }
+
+        while (!out.empty() && out.back() == ' ')
+            out.pop_back();
+
         return out;
     }
 
@@ -52,10 +135,15 @@ namespace LegendaryImpactEventmanager::Utility
 
     std::string CleanEventDescription(std::string text)
     {
+        text = StripEmojis(text);
+        text = FixSpacesAfterEmojiStrip(text);
+
         size_t pos = text.find("Rollen");
         if (pos != std::string::npos) text = text.substr(0, pos);
+
         pos = text.find("Teilnehmer");
         if (pos != std::string::npos) text = text.substr(0, pos);
+
         return text;
     }
 
