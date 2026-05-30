@@ -539,11 +539,11 @@ namespace LegendaryImpactEventmanager
             m_ConfigStore.ReminderRepeatMinutes() = 1;
         }
 
-        ImGui::Checkbox("Neue Events ankuendigen", &m_ConfigStore.AnnounceNewEventsEnabled());
+        ImGui::Checkbox(Utility::UiText("Neue Events ankuendigen").c_str(), &m_ConfigStore.AnnounceNewEventsEnabled());
 
         if (ImGui::Button("Test Reminder"))
         {
-            m_ReminderService.ShowReminder("Wing 4 Fullclear (Auch fuer Anfaenger)", Utility::FormatLocalNow(), "RAID", 15);
+            m_ReminderService.ShowReminder( Utility::UiText("Wing 4 Fullclear (Auch fuer Anfänger)"), Utility::FormatLocalNow(), "RAID", 15);
         }
 
         ImGui::SameLine();
@@ -553,7 +553,7 @@ namespace LegendaryImpactEventmanager
             std::vector<EventItem> testEvents;
 
             EventItem raid;
-            raid.title = "Wing 4 Fullclear (Auch fuer Anfaenger)";
+            raid.title = "Wing 4 Fullclear (Auch fuer Anfänger)";
             raid.start = "2025-01-15T19:00:00";
             raid.tag = "RAID";
 

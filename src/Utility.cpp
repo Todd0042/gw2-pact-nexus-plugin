@@ -14,7 +14,7 @@ namespace LegendaryImpactEventmanager::Utility
         }
     }
 
-    std::string ReplaceGermanUmlauts(std::string value)
+    std::string UiText(std::string value)
     {
         ReplaceAll(value, "ä", "ae"); ReplaceAll(value, "Ä", "Ae");
         ReplaceAll(value, "ö", "oe"); ReplaceAll(value, "Ö", "Oe");
@@ -50,8 +50,6 @@ namespace LegendaryImpactEventmanager::Utility
         }
         return out;
     }
-
-    std::string UiText(const std::string& value) { return ReplaceGermanUmlauts(StripUnsupportedEmoji(value)); }
 
     std::string DisplayUser(const std::string& username, const std::string& account)
     {
