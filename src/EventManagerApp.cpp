@@ -152,6 +152,8 @@ namespace LegendaryImpactEventmanager
         m_Api->Textures_LoadFromResource(Constants::AlacrityIconId, IDB_PNG4, m_Self, nullptr);
         m_Api->Textures_LoadFromResource(Constants::SquadIconId, IDB_PNG5, m_Self, nullptr);
         m_Api->Textures_LoadFromResource(Constants::NoSquadIconId, IDB_PNG6, m_Self, nullptr);
+        m_Api->Textures_LoadFromResource(Constants::PactLogo, IDB_PNG7, m_Self, nullptr);
+        m_Api->Textures_LoadFromResource(Constants::Lock, IDB_PNG8, m_Self, nullptr);
     }
 
     void EventManagerApp::OnSquadUpdate(RTAPI::GroupMember* aGroupMember)
@@ -188,13 +190,14 @@ namespace LegendaryImpactEventmanager
 
     void EventManagerApp::RegisterNexusHooks()
     {
-        m_Api->InputBinds_RegisterWithString(Constants::KeybindId, ::OnInputBind, "F8");
+        m_Api->InputBinds_RegisterWithString(Constants::KeybindToggleId, ::OnInputBind, "F8");
+        m_Api->InputBinds_RegisterWithString(Constants::KeybindCloseAllId, ::OnInputBind, "F10");
 
         m_Api->QuickAccess_Add(
             Constants::QuickAccessId,
             Constants::IconId,
             Constants::IconHoverId,
-            Constants::KeybindId,
+            Constants::KeybindToggleId,
             "Legendary Impact - Eventmanager");
       
         m_Api->GUI_Register(RT_Render, AddonRender);
@@ -207,7 +210,8 @@ namespace LegendaryImpactEventmanager
     void EventManagerApp::DeregisterNexusHooks()
     {
         m_Api->QuickAccess_Remove(Constants::QuickAccessId);
-        m_Api->InputBinds_Deregister(Constants::KeybindId);
+        m_Api->InputBinds_Deregister(Constants::KeybindToggleId);
+        m_Api->InputBinds_Deregister(Constants::KeybindCloseAllId);
 
         m_Api->GUI_Deregister(AddonRender);
         m_Api->GUI_Deregister(AddonOptions);
@@ -251,10 +255,20 @@ namespace LegendaryImpactEventmanager
     void EventManagerApp::OnInputBind(const char* identifier, bool isRelease)
     {
         if (isRelease || !identifier) return;
-        if (std::strcmp(identifier, Constants::KeybindId) != 0) return;
 
-        m_SharedState.ToggleWindowShown();
-        m_ConfigStore.Save();
+        if (std::strcmp(identifier, Constants::KeybindToggleId) == 0)
+        {
+            m_SharedState.ToggleWindowShown();
+            m_ConfigStore.Save();
+            return;
+        }
+
+        if (std::strcmp(identifier, Constants::KeybindCloseAllId) == 0)
+        {
+            m_SharedState.SetWindowShown(false);
+            m_ReminderService.CloseAllWindows();
+            return;
+        }
     }
 
     void EventManagerApp::RequestSyncNow()

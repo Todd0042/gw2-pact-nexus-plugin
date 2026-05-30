@@ -76,6 +76,8 @@
     <Image Include="resources\alacrity.png" />
     <Image Include="resources\squad.png" />
     <Image Include="resources\noSquad.png" />
+    <Image Include="resources\pact.png" />
+    <Image Include="resources\lock.png" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="LegendaryImpactNexus.rc" />

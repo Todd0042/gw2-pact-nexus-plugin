@@ -41,6 +41,7 @@ namespace LegendaryImpactEventmanager
         std::string url;
         std::string leaderName;
         std::string leaderAccount;
+        bool isPublic = false;
         bool isViewerAttending = false;
         int attendeeCount = 0;
         int slotCount = 0;

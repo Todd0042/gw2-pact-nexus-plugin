@@ -15,6 +15,10 @@ namespace LegendaryImpactEventmanager
         void ShowNewEventsAnnouncement(const std::vector<EventItem>& events);
         void Render();
 
+        void CloseReminderWindow();
+        void CloseNewEventsWindow();
+        void CloseAllWindows();
+
     private:
         SharedState& m_SharedState;
         bool m_ShowReminderMessage = false;

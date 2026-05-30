@@ -29,6 +29,7 @@ namespace
         target["url"] = event.url;
         target["leaderName"] = event.leaderName;
         target["leaderAccount"] = event.leaderAccount;
+        target["isPublic"] = event.isPublic;
         target["isViewerAttending"] = event.isViewerAttending;
         target["attendeeCount"] = event.attendeeCount;
         target["slotCount"] = event.slotCount;
@@ -67,6 +68,7 @@ namespace
         event.url = item.value("url", "");
         event.leaderName = item.value("leaderName", "");
         event.leaderAccount = item.value("leaderAccount", "");
+        event.isPublic = item.value("isPublic", false);
         event.isViewerAttending = item.value("isViewerAttending", false);
         event.attendeeCount = item.value("attendeeCount", 0);
         event.slotCount = item.value("slotCount", 0);
@@ -179,6 +181,7 @@ namespace LegendaryImpactEventmanager
                     event.tag = JsonString(item, "tag");
                     event.url = JsonString(item, "url");
                     event.isViewerAttending = item.value("isViewerAttending", false);
+                    event.isPublic = item.value("isPublic", false);
 
                     if (item.contains("creator") && item["creator"].is_object())
                     {

@@ -65,6 +65,31 @@ namespace LegendaryImpactEventmanager
         ImGui::Image((ImTextureID)texture->Resource, ImVec2(18.0f, 18.0f));
     }
 
+    void EventWindow::RenderEventTitle(const EventItem& event)
+    {
+        constexpr float iconSize = 14.0f;
+
+        if (!event.isPublic)
+        {
+            Texture_t* texture = m_Api->Textures_Get(Constants::Lock);
+
+            const float startY = ImGui::GetCursorPosY();
+            const float textHeight = ImGui::GetTextLineHeight();
+
+            if (texture && texture->Resource)
+            {
+                ImGui::Image((ImTextureID)texture->Resource, ImVec2(iconSize, iconSize));
+            }
+            else
+            {
+                ImGui::TextUnformatted("[Intern]");
+            }
+            ImGui::SameLine();
+        }
+
+        ImGui::TextWrapped("%s", event.title.c_str());
+    }
+
     void EventWindow::RenderBoonIcon(const std::string& boon)
     {
         const char* textureId = nullptr;
@@ -341,11 +366,14 @@ namespace LegendaryImpactEventmanager
                 ImGui::TableNextRow();
 
                 ImGui::TableSetColumnIndex(0);
-                bool eventOpen = ImGui::TreeNodeEx("event", ImGuiTreeNodeFlags_SpanFullWidth, "%s", event.title.c_str());
+
+                bool eventOpen = ImGui::TreeNodeEx("event", ImGuiTreeNodeFlags_SpanFullWidth, "");
+                ImGui::SameLine(0.0f, 12.0f);
+                RenderEventTitle(event);
 
                 if (Utility::IsEventActive(event))
                 {
-                    ImGui::SameLine(0.0f, 4.0f);
+                    ImGui::SameLine();
                     ImGui::TextColored(ImVec4(0.20f, 0.90f, 0.30f, 1.0f), "[Aktiv]");
                 }
 
@@ -547,8 +575,6 @@ namespace LegendaryImpactEventmanager
 
             m_ReminderService.ShowNewEventsAnnouncement(testEvents);
         }
-
-        ImGui::Spacing();
 
         if (ImGui::Button("Einstellungen speichern"))
         {

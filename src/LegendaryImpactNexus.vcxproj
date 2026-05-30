@@ -218,7 +218,9 @@
     <Image Include="resources\alacrity.png" />
     <Image Include="resources\icon.png" />
     <Image Include="resources\icon_hover.png" />
+    <Image Include="resources\lock.png" />
     <Image Include="resources\noSquad.png" />
+    <Image Include="resources\pact.png" />
     <Image Include="resources\quickness.png" />
     <Image Include="resources\squad.png" />
   </ItemGroup>

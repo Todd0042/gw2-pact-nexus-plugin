@@ -177,7 +177,7 @@ namespace LegendaryImpactEventmanager
 
                 if (ImGui::Button("OK", ImVec2(buttonWidth, 0.0f)))
                 {
-                    m_ShowReminderMessage = false;
+                    CloseReminderWindow();
                 }
             }
 
@@ -328,7 +328,7 @@ namespace LegendaryImpactEventmanager
 
                 if (ImGui::Button("OK", ImVec2(buttonWidth, 0.0f)))
                 {
-                    m_ShowNewEventsMessage = false;
+                    CloseNewEventsWindow();
                 }
             }
 
@@ -336,6 +336,28 @@ namespace LegendaryImpactEventmanager
 
             ImGui::PopStyleVar(3);
         }
+    }
+
+    void ReminderService::CloseReminderWindow()
+    {
+        m_ShowReminderMessage = false;
+        m_ReminderTitle.clear();
+        m_ReminderDate.clear();
+        m_ReminderTag.clear();
+        m_ReminderTimeLeft.clear();
+    }
+
+    void ReminderService::CloseNewEventsWindow()
+    {
+        m_ShowNewEventsMessage = false;
+        m_NewEvents.clear();
+        m_NewEvents.shrink_to_fit();
+    }
+
+    void ReminderService::CloseAllWindows()
+    {
+        CloseReminderWindow();
+        CloseNewEventsWindow();
     }
 
     void ReminderService::CheckNewEventAnnouncements(const PluginState& state)

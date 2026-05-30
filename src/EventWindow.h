@@ -35,6 +35,7 @@ namespace LegendaryImpactEventmanager
         void RenderMarkdownText(const std::string& text);
         void RenderRtApiStatus();
         void RenderStatusIcon(bool active);
+        void RenderEventTitle(const EventItem& event);
 
         std::chrono::steady_clock::time_point m_LastManualSync{};
         std::string ViewerLabel(const PluginState& state) const;
