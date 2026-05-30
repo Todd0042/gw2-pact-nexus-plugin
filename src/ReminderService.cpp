@@ -87,7 +87,8 @@ namespace LegendaryImpactEventmanager
         const char* childId,
         const char* tableId,
         const std::vector<EventItem>& events,
-        float listHeight)
+        float listHeight,
+        bool showTimeRemaining)
     {
         if (ImGui::BeginChild(childId, ImVec2(0.0f, listHeight), false))
         {
@@ -100,7 +101,10 @@ namespace LegendaryImpactEventmanager
                 ImGuiTableFlags_Resizable))
             {
                 ImGui::TableSetupColumn("Event", ImGuiTableColumnFlags_WidthStretch, 2.5f);
-                ImGui::TableSetupColumn("Datum", ImGuiTableColumnFlags_WidthStretch, 1.4f);
+                ImGui::TableSetupColumn(
+                    showTimeRemaining ? "Startet in" : "Datum",
+                    showTimeRemaining ? ImGuiTableColumnFlags_WidthFixed : ImGuiTableColumnFlags_WidthStretch,
+                    showTimeRemaining ? 100.0f : 1.4f);
                 ImGui::TableSetupColumn("Tag", ImGuiTableColumnFlags_WidthFixed, 90.0f);
                 ImGui::TableHeadersRow();
 
@@ -113,22 +117,47 @@ namespace LegendaryImpactEventmanager
 
                     ImGui::TableSetColumnIndex(1);
 
-                    if (!event.start.empty())
+                    if (showTimeRemaining)
                     {
-                        if (event.start.find('T') != std::string::npos)
+                        std::time_t startTime = 0;
+
+                        if (Utility::ParseIsoUtc(event.start, startTime))
                         {
-                            ImGui::TextWrapped(
-                                "%s",
-                                Utility::FormatGermanDateTime(event.start).c_str());
+                            const int minutesLeft = (std::max)(
+                                0,
+                                static_cast<int>(std::difftime(startTime, std::time(nullptr)) / 60.0));
+
+                            if (minutesLeft >= 60)
+                            {
+                                ImGui::Text("%dh %02dm", minutesLeft / 60, minutesLeft % 60);
+                            }
+                            else
+                            {
+                                ImGui::Text("%d Min.", minutesLeft);
+                            }
                         }
                         else
                         {
-                            ImGui::TextWrapped("%s", event.start.c_str());
+                            ImGui::TextDisabled("-");
                         }
                     }
                     else
                     {
-                        ImGui::TextDisabled("-");
+                        if (!event.start.empty())
+                        {
+                            if (event.start.find('T') != std::string::npos)
+                            {
+                                ImGui::TextWrapped("%s", Utility::FormatGermanDateTime(event.start).c_str());
+                            }
+                            else
+                            {
+                                ImGui::TextWrapped("%s", event.start.c_str());
+                            }
+                        }
+                        else
+                        {
+                            ImGui::TextDisabled("-");
+                        }
                     }
 
                     ImGui::TableSetColumnIndex(2);
@@ -228,7 +257,8 @@ namespace LegendaryImpactEventmanager
                         "reminderEventsList",
                         "reminderEventsTable",
                         reminderEvents,
-                        listHeight);
+                        listHeight, 
+                        true);
 
                     ImGui::Spacing();
                     ImGui::Separator();
@@ -321,7 +351,8 @@ namespace LegendaryImpactEventmanager
                     "newEventsList",
                     "newEventsTable",
                     newEvents,
-                    listHeight);
+                    listHeight,
+                    false);
 
                 ImGui::Spacing();
                 ImGui::Separator();

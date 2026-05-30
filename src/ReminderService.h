@@ -30,7 +30,8 @@ namespace LegendaryImpactEventmanager
             const char* childId,
             const char* tableId,
             const std::vector<EventItem>& events,
-            float listHeight);
+            float listHeight,
+            bool showTimeRemaining);
 
         float CalculatePopupListHeight(std::size_t eventCount) const;
     };
