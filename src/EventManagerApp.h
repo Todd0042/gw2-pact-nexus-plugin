@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include "ConfigStore.h"
 #include "EventService.h"

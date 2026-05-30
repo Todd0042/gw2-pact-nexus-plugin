@@ -1,4 +1,4 @@
-#include "SharedState.h"
+﻿#include "SharedState.h"
 #include <utility>
 
 namespace LegendaryImpactEventmanager

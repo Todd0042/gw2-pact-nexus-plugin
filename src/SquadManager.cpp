@@ -1,4 +1,4 @@
-#include "SquadManager.h"
+﻿#include "SquadManager.h"
 #include <algorithm>
 #include <cctype>
 

@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include "Models.h"
 #include "SharedState.h"

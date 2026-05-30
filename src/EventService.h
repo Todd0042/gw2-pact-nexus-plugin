@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 #include "HttpClient.h"
 #include "SharedState.h"
 #include <string>

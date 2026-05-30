@@ -1,4 +1,4 @@
-#include "HttpClient.h"
+﻿#include "HttpClient.h"
 #include "Utility.h"
 #include <Windows.h>
 #include <winhttp.h>

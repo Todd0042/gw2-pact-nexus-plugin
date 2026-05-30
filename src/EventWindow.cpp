@@ -1,4 +1,4 @@
-#include "EventWindow.h"
+﻿#include "EventWindow.h"
 #include "Constants.h"
 #include "Utility.h"
 #include "SquadManager.h"
@@ -43,7 +43,7 @@ namespace LegendaryImpactEventmanager
         {
             ImGui::TextColored(ImVec4(1.0f, 0.25f, 0.25f, 1.0f), "Nicht installiert");
             ImGui::SameLine();
-            ImGui::TextDisabled("(eingeschraenkte Funktionalitaet)");
+            ImGui::TextDisabled("(eingeschränkte Funktionalität)");
         }
     }
 
@@ -518,7 +518,7 @@ namespace LegendaryImpactEventmanager
             m_ConfigStore.RefreshMinutes() = 5;
         }
 
-        ImGui::TextDisabled("Keybind: bitte in den Nexus Keybind-Einstellungen fuer Legendary Impact - Eventmanager setzen.");
+        ImGui::TextDisabled("Keybind: bitte in den Nexus Keybind-Einstellungen für Legendary Impact - Eventmanager setzen.");
 
         ImGui::Spacing();
         ImGui::Separator();
@@ -539,11 +539,16 @@ namespace LegendaryImpactEventmanager
             m_ConfigStore.ReminderRepeatMinutes() = 1;
         }
 
-        ImGui::Checkbox("Neue Events ank�ndigen", &m_ConfigStore.AnnounceNewEventsEnabled());
+        ImGui::Checkbox("Neue Events ankündigen", &m_ConfigStore.AnnounceNewEventsEnabled());
 
         if (ImGui::Button("Test Reminder"))
         {
-            m_ReminderService.ShowReminder("Wing 4 Fullclear (Auch fuer Anf�nger)", Utility::FormatLocalNow(), "RAID", 15);
+            m_ReminderService.ShowReminder(
+                "Wing 4 Fullclear (Auch für Anfänger)",
+                Utility::FormatLocalNow(),
+                "RAID",
+                15
+            );
         }
 
         ImGui::SameLine();
@@ -553,7 +558,7 @@ namespace LegendaryImpactEventmanager
             std::vector<EventItem> testEvents;
 
             EventItem raid;
-            raid.title = "Wing 4 Fullclear (Auch fuer Anf�nger)";
+            raid.title = "Wing 4 Fullclear (Auch für Anfänger)";
             raid.start = "2025-01-15T19:00:00";
             raid.tag = "RAID";
 
