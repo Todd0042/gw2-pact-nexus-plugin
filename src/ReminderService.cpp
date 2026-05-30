@@ -21,7 +21,7 @@ namespace LegendaryImpactEventmanager
         int minutesUntilStart)
     {
         EventItem event;
-        event.title = Utility::UiText(title);
+        event.title = title;
         event.start = date;
         event.tag = tag;
         event.attendeeCount = minutesUntilStart;
@@ -113,7 +113,7 @@ namespace LegendaryImpactEventmanager
                     ImGui::TableNextRow();
 
                     ImGui::TableSetColumnIndex(0);
-                    ImGui::TextWrapped("%s", Utility::UiText(event.title).c_str());
+                    ImGui::TextWrapped("%s", event.title.c_str());
 
                     ImGui::TableSetColumnIndex(1);
 
@@ -214,7 +214,7 @@ namespace LegendaryImpactEventmanager
 
                 for (const auto& event : reminderEvents)
                 {
-                    const std::string title = Utility::UiText(event.title);
+                    const std::string title = event.title;
                     const ImVec2 titleSize = ImGui::CalcTextSize(title.c_str());
 
                     contentWidth = (std::max)(contentWidth, titleSize.x + paddingWidth);
@@ -308,7 +308,7 @@ namespace LegendaryImpactEventmanager
 
             for (const auto& event : newEvents)
             {
-                const std::string title = Utility::UiText(event.title);
+                const std::string title = event.title;
                 const ImVec2 titleSize = ImGui::CalcTextSize(title.c_str());
 
                 contentWidth = (std::max)(contentWidth, titleSize.x + paddingWidth);

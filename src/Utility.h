@@ -8,7 +8,6 @@
 namespace LegendaryImpactEventmanager::Utility
 {
     void ReplaceAll(std::string& value, const std::string& from, const std::string& to);
-    std::string UiText(std::string value);
     std::string StripUnsupportedEmoji(const std::string& input);
     std::string DisplayUser(const std::string& username, const std::string& account);
     std::string CleanEventDescription(std::string text);

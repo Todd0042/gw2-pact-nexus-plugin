@@ -14,15 +14,6 @@ namespace LegendaryImpactEventmanager::Utility
         }
     }
 
-    std::string UiText(std::string value)
-    {
-        ReplaceAll(value, "ä", "ae"); ReplaceAll(value, "Ä", "Ae");
-        ReplaceAll(value, "ö", "oe"); ReplaceAll(value, "Ö", "Oe");
-        ReplaceAll(value, "ü", "ue"); ReplaceAll(value, "Ü", "Ue");
-        ReplaceAll(value, "ß", "ss");
-        return value;
-    }
-
     std::string StripUnsupportedEmoji(const std::string& input)
     {
         std::string out;
@@ -94,7 +85,7 @@ namespace LegendaryImpactEventmanager::Utility
     {
         static const char* months[] = { "Jan.", "Feb.", "Maerz", "Apr.", "Mai", "Juni", "Juli", "Aug.", "Sept.", "Okt.", "Nov.", "Dez." };
         std::time_t utc = 0;
-        if (!ParseIsoUtc(value, utc)) return UiText(value);
+        if (!ParseIsoUtc(value, utc)) return value;
         std::tm local = {};
         localtime_s(&local, &utc);
         char buffer[128] = {};
@@ -170,7 +161,7 @@ namespace LegendaryImpactEventmanager::Utility
             size_t pos = 0; size_t len = std::strlen(token);
             while ((pos = text.find(token, pos)) != std::string::npos) text.erase(pos, len);
         }
-        return UiText(text);
+        return text;
     }
 
     void CopyToClipboard(const std::string& text)

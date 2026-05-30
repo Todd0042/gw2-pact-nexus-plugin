@@ -115,7 +115,7 @@ namespace LegendaryImpactEventmanager
     void EventService::StoreError(const std::string& error)
     {
         m_SharedState.UpdateState([&](PluginState& state) {
-            state.lastSync = "Fehler: " + Utility::UiText(error);
+            state.lastSync = "Fehler: " + error;
             });
     }
 
@@ -163,8 +163,8 @@ namespace LegendaryImpactEventmanager
 
             if (data.contains("viewer") && data["viewer"].is_object())
             {
-                nextState.viewerUsername = Utility::UiText(JsonString(data["viewer"], "username"));
-                nextState.viewerGw2Account = Utility::UiText(JsonString(data["viewer"], "gw2Account"));
+                nextState.viewerUsername = JsonString(data["viewer"], "username");
+                nextState.viewerGw2Account = JsonString(data["viewer"], "gw2Account");
             }
 
             if (data.contains("events") && data["events"].is_array())
@@ -173,9 +173,9 @@ namespace LegendaryImpactEventmanager
                 {
                     EventItem event;
                     event.id = JsonString(item, "id");
-                    event.title = Utility::UiText(JsonString(item, "title", "Unbenannt"));
-                    event.description = Utility::UiText(JsonString(item, "description"));
-                    event.location = Utility::UiText(JsonString(item, "location"));
+                    event.title = JsonString(item, "title", "Unbenannt");
+                    event.description = JsonString(item, "description");
+                    event.location = JsonString(item, "location");
                     event.start = JsonString(item, "start");
                     event.end = JsonString(item, "end");
                     event.tag = JsonString(item, "tag");
@@ -185,8 +185,8 @@ namespace LegendaryImpactEventmanager
 
                     if (item.contains("creator") && item["creator"].is_object())
                     {
-                        event.leaderName = Utility::UiText(JsonString(item["creator"], "username"));
-                        event.leaderAccount = Utility::UiText(JsonString(item["creator"], "gw2Account"));
+                        event.leaderName = JsonString(item["creator"], "username");
+                        event.leaderAccount = JsonString(item["creator"], "gw2Account");
                     }
 
                     if (item.contains("_count") && item["_count"].contains("attendees"))
@@ -209,8 +209,8 @@ namespace LegendaryImpactEventmanager
                             EventAttendee attendee;
                             if (attendeeJson.contains("user") && attendeeJson["user"].is_object())
                             {
-                                attendee.username = Utility::UiText(JsonString(attendeeJson["user"], "username"));
-                                attendee.gw2Account = Utility::UiText(JsonString(attendeeJson["user"], "gw2Account"));
+                                attendee.username = JsonString(attendeeJson["user"], "username");
+                                attendee.gw2Account = JsonString(attendeeJson["user"], "gw2Account");
                             }
                             if (attendeeJson.contains("slot") && attendeeJson["slot"].is_object())
                             {

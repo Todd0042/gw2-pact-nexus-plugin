@@ -539,11 +539,11 @@ namespace LegendaryImpactEventmanager
             m_ConfigStore.ReminderRepeatMinutes() = 1;
         }
 
-        ImGui::Checkbox(Utility::UiText("Neue Events ankuendigen").c_str(), &m_ConfigStore.AnnounceNewEventsEnabled());
+        ImGui::Checkbox("Neue Events ankündigen", &m_ConfigStore.AnnounceNewEventsEnabled());
 
         if (ImGui::Button("Test Reminder"))
         {
-            m_ReminderService.ShowReminder( Utility::UiText("Wing 4 Fullclear (Auch fuer Anfänger)"), Utility::FormatLocalNow(), "RAID", 15);
+            m_ReminderService.ShowReminder("Wing 4 Fullclear (Auch fuer Anfänger)", Utility::FormatLocalNow(), "RAID", 15);
         }
 
         ImGui::SameLine();
