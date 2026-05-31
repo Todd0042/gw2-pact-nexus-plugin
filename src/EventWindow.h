@@ -47,6 +47,11 @@ namespace LegendaryImpactEventmanager
         // so this runs as a small state machine ticked once per render frame
         // on the game's main thread (the only safe place for WndProc injection).
         enum class ChatSendStage { Idle, OpenChat, TypeText, Submit };
+        // The squad-join button is only shown to attendees once the event is
+        // imminent (within the lead time before start) or already in progress.
+        bool ShouldShowJoinButton(const EventItem& event, const PluginState& state) const;
+        bool IsViewerAttending(const EventItem& event, const PluginState& state) const;
+
         void QueueChatCommand(const std::string& command);
         void TickChatSender();
         void SendKeyToGame(WORD virtualKey, bool keyUp);

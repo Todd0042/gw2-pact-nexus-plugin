@@ -12,6 +12,64 @@ namespace LegendaryImpactEventmanager
         : m_Api(api), m_SharedState(sharedState), m_ConfigStore(configStore), m_ReminderService(reminderService), m_RtApi(rtApi), m_SyncNow(std::move(syncNow)) {
     }
 
+    bool EventWindow::IsViewerAttending(const EventItem& event, const PluginState& state) const
+    {
+        // The API's per-event isViewerAttending flag is unreliable (can be false
+        // while signed up), so treat it only as a hint and confirm against the
+        // attendee list using the viewer's own account.
+        if (event.isViewerAttending) return true;
+
+        // Resolve the viewer's own account. The Legendary Impact API sometimes
+        // returns no viewer identity at all, so fall back to the RealTime API's
+        // self account name (RealTimeData::AccountName) when it's available.
+        std::string viewer = SquadManager::NormalizeAccountName(state.viewerGw2Account);
+        if (viewer.empty() && m_RtApi && m_RtApi->AccountName[0] != '\0')
+        {
+            viewer = SquadManager::NormalizeAccountName(m_RtApi->AccountName);
+        }
+        if (viewer.empty()) return false;
+
+        for (const auto& attendee : event.attendees)
+        {
+            if (SquadManager::NormalizeAccountName(attendee.gw2Account) == viewer)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    bool EventWindow::ShouldShowJoinButton(const EventItem& event, const PluginState& state) const
+    {
+        // Base eligibility: a real squad event with a leader (not a meeting).
+        if (event.leaderAccount.empty() || event.slotCount <= 5 || event.tag == "MEETING")
+        {
+            return false;
+        }
+
+        // Only for events the viewer actually signed up for.
+        if (!IsViewerAttending(event, state)) return false;
+
+        // Minutes before start at which the button becomes available.
+        constexpr int kJoinLeadMinutes = 15;
+
+        std::time_t startTime = 0;
+        if (Utility::ParseIsoUtc(event.start, startTime))
+        {
+            const int secondsUntilStart =
+                static_cast<int>(std::difftime(startTime, std::time(nullptr)));
+
+            if (secondsUntilStart >= 0 && secondsUntilStart <= kJoinLeadMinutes * 60)
+            {
+                return true;
+            }
+        }
+
+        // Keep it available while the event is under way (now between start/end).
+        return Utility::IsEventActive(event);
+    }
+
     void EventWindow::QueueChatCommand(const std::string& command)
     {
         if (command.empty()) return;
@@ -579,7 +637,7 @@ namespace LegendaryImpactEventmanager
                     ShellExecuteA(nullptr, "open", event.url.c_str(), nullptr, nullptr, SW_SHOWNORMAL);
                 }
 
-                if (!event.leaderAccount.empty() && event.slotCount > 5 && event.tag != "MEETING")
+                if (ShouldShowJoinButton(event, state))
                 {
                     ImGui::SameLine();
 
