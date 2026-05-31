@@ -12,6 +12,102 @@ namespace LegendaryImpactEventmanager
         : m_Api(api), m_SharedState(sharedState), m_ConfigStore(configStore), m_ReminderService(reminderService), m_RtApi(rtApi), m_SyncNow(std::move(syncNow)) {
     }
 
+    void EventWindow::QueueChatCommand(const std::string& command)
+    {
+        if (command.empty()) return;
+
+        // A new request overrides any in-flight one.
+        m_ChatPending = command;
+        m_ChatStage = ChatSendStage::OpenChat;
+        m_ChatStageAt = std::chrono::steady_clock::now();
+    }
+
+    HWND EventWindow::ResolveGameWindow()
+    {
+        if (m_GameWindow && IsWindow(m_GameWindow)) return m_GameWindow;
+
+        m_GameWindow = FindWindowA("ArenaNet_Dx_Window_Class", nullptr);
+        if (!m_GameWindow) m_GameWindow = FindWindowA(nullptr, "Guild Wars 2");
+        if (!m_GameWindow) m_GameWindow = GetForegroundWindow();
+
+        return m_GameWindow;
+    }
+
+    void EventWindow::SendKeyToGame(WORD virtualKey, bool keyUp)
+    {
+        if (!m_Api || !m_Api->WndProc_SendToGameOnly) return;
+
+        const HWND hwnd = ResolveGameWindow();
+        if (!hwnd) return;
+
+        const UINT scanCode = MapVirtualKeyW(virtualKey, MAPVK_VK_TO_VSC);
+
+        // Standard WM_KEY* lParam: bits 0-15 repeat count (1), bits 16-23 scan code.
+        LPARAM lParam = static_cast<LPARAM>(1) | (static_cast<LPARAM>(scanCode) << 16);
+        if (keyUp)
+        {
+            // Bit 30 = previous key state down, bit 31 = transition (key released).
+            lParam |= (static_cast<LPARAM>(1) << 30) | (static_cast<LPARAM>(1) << 31);
+        }
+
+        m_Api->WndProc_SendToGameOnly(hwnd, keyUp ? WM_KEYUP : WM_KEYDOWN, virtualKey, lParam);
+    }
+
+    void EventWindow::SendCharToGame(char character)
+    {
+        if (!m_Api || !m_Api->WndProc_SendToGameOnly) return;
+
+        const HWND hwnd = ResolveGameWindow();
+        if (!hwnd) return;
+
+        m_Api->WndProc_SendToGameOnly(
+            hwnd,
+            WM_CHAR,
+            static_cast<WPARAM>(static_cast<unsigned char>(character)),
+            static_cast<LPARAM>(1));
+    }
+
+    void EventWindow::TickChatSender()
+    {
+        if (m_ChatStage == ChatSendStage::Idle) return;
+
+        const auto now = std::chrono::steady_clock::now();
+        const auto elapsedMs =
+            std::chrono::duration_cast<std::chrono::milliseconds>(now - m_ChatStageAt).count();
+
+        switch (m_ChatStage)
+        {
+        case ChatSendStage::OpenChat:
+            // Enter opens the chat input box.
+            SendKeyToGame(VK_RETURN, false);
+            SendKeyToGame(VK_RETURN, true);
+            m_ChatStageAt = now;
+            m_ChatStage = ChatSendStage::TypeText;
+            break;
+
+        case ChatSendStage::TypeText:
+            // Give the game a moment to actually open the chat box before typing,
+            // otherwise the characters are dropped or interpreted as keybinds.
+            if (elapsedMs < 150) break;
+            for (char c : m_ChatPending) SendCharToGame(c);
+            m_ChatStageAt = now;
+            m_ChatStage = ChatSendStage::Submit;
+            break;
+
+        case ChatSendStage::Submit:
+            if (elapsedMs < 40) break;
+            // Enter again submits the command.
+            SendKeyToGame(VK_RETURN, false);
+            SendKeyToGame(VK_RETURN, true);
+            m_ChatPending.clear();
+            m_ChatStage = ChatSendStage::Idle;
+            break;
+
+        case ChatSendStage::Idle:
+            break;
+        }
+    }
+
     ImVec4 EventWindow::RoleColor(const std::string& role) const
     {
         if (role == "HEAL") return ImVec4(0.25f, 0.85f, 0.45f, 1.0f);
@@ -487,9 +583,24 @@ namespace LegendaryImpactEventmanager
                 {
                     ImGui::SameLine();
 
+                    const std::string sqjoinCommand = "/sqjoin " + event.leaderAccount;
+
                     if (ImGui::Button("Squad beitreten"))
                     {
-                        Utility::CopyToClipboard("/sqjoin " + event.leaderAccount);
+                        QueueChatCommand(sqjoinCommand);
+                    }
+
+                    if (ImGui::IsItemHovered())
+                    {
+                        ImGui::SetTooltip(
+                            "Linksklick: automatisch beitreten\n"
+                            "Rechtsklick: %s kopieren",
+                            sqjoinCommand.c_str());
+                    }
+
+                    if (ImGui::IsItemClicked(ImGuiMouseButton_Right))
+                    {
+                        Utility::CopyToClipboard(sqjoinCommand);
                     }
                 }
 
@@ -502,6 +613,11 @@ namespace LegendaryImpactEventmanager
 
     void EventWindow::RenderAddonWindow()
     {
+        // Advance any in-flight /sqjoin send. Ticked unconditionally (even while
+        // the window is hidden) so a queued send finishes if the user closes the
+        // window mid-flight.
+        TickChatSender();
+
         m_SharedState.WithStateRead([&](const PluginState& state) {
             m_ReminderService.CheckEventReminders(state);
             m_ReminderService.CheckNewEventAnnouncements(state);

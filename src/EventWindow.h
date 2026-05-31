@@ -41,6 +41,23 @@ namespace LegendaryImpactEventmanager
         std::string ViewerLabel(const PluginState& state) const;
         ImVec4 RoleColor(const std::string& role) const;
 
+        // Auto chat-send: types a command into the GW2 chat box by injecting
+        // WndProc messages straight to the game (no manual copy/paste). The
+        // game needs a frame or two between opening chat and accepting text,
+        // so this runs as a small state machine ticked once per render frame
+        // on the game's main thread (the only safe place for WndProc injection).
+        enum class ChatSendStage { Idle, OpenChat, TypeText, Submit };
+        void QueueChatCommand(const std::string& command);
+        void TickChatSender();
+        void SendKeyToGame(WORD virtualKey, bool keyUp);
+        void SendCharToGame(char character);
+        HWND ResolveGameWindow();
+
+        ChatSendStage m_ChatStage = ChatSendStage::Idle;
+        std::string m_ChatPending;
+        std::chrono::steady_clock::time_point m_ChatStageAt{};
+        HWND m_GameWindow = nullptr;
+
         AddonAPI_t*& m_Api;
         RTAPI::RealTimeData*& m_RtApi;
         SharedState& m_SharedState;
